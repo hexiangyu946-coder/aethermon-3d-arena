@@ -218,6 +218,25 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 font-bold">Secret Gist</span>
               </div>
               <p class="text-xs text-slate-300 leading-relaxed">除了默认启用的 <strong>30天免密自动记住登录 (Cookie + IndexedDB)</strong> 外，你还可以绑定含 <code class="text-amber-300">gist</code> 权限的 Token，将所有账号与精灵自动同步至你私有的加密 GitHub Gist，换设备也能一键拉取！</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div>
+                  <label for="gh-sync-interval" class="block text-[11px] font-semibold text-slate-400 mb-1">自动云端同步频率</label>
+                  <select id="gh-sync-interval" onchange="updateCloudSyncInterval(this.value, false)" class="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white">
+                    <option value="10">每 10 秒自动同步</option>
+                    <option value="30" selected>每 30 秒自动同步 (默认)</option>
+                    <option value="60">每 60 秒自动同步</option>
+                    <option value="120">每 120 秒自动同步</option>
+                    <option value="0">关闭定时同步</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="gh-sync-custom" class="block text-[11px] font-semibold text-slate-400 mb-1">或自定义秒数 (≥5s)</label>
+                  <div class="flex gap-1.5">
+                    <input id="gh-sync-custom" type="number" min="5" max="3600" placeholder="如 15" class="w-full px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white" />
+                    <button type="button" onclick="applyCustomSyncInterval(false)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-indigo-200 shrink-0">保存</button>
+                  </div>
+                </div>
+              </div>
               <div class="flex flex-wrap gap-2 pt-1">
                 <button type="button" onclick="bindAndSyncGitHubCloud('both')" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition">
                   ☁️ 绑定 Token 并双向同步云存档
@@ -1861,18 +1880,135 @@
     // =========================================================================
     // GITHUB REST API HELPER: 1-CLICK PAGES DEPLOYER & SECRET GIST CLOUD VAULT
     // =========================================================================
+    let cloudPeriodicTimer = null;
+    let lastCloudSyncHash = '';
+
     function loadLocalGhConfig() {
       try {
         const raw = localStorage.getItem('aethermon_gh_cloud_v1');
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.autoSyncSec === undefined) parsed.autoSyncSec = 30;
+          return parsed;
+        }
       } catch (e) {}
-      return { token: '', gistId: '', repo: 'aethermon-arena' };
+      return { token: '', gistId: '', repo: 'aethermon-arena', autoSyncSec: 30 };
     }
 
     function saveLocalGhConfig(cfg) {
+      const merged = Object.assign({ token: '', gistId: '', repo: 'aethermon-arena', autoSyncSec: 30 }, cfg);
       try {
-        localStorage.setItem('aethermon_gh_cloud_v1', JSON.stringify(cfg));
+        localStorage.setItem('aethermon_gh_cloud_v1', JSON.stringify(merged));
       } catch (e) {}
+      return merged;
+    }
+
+    function syncGhIntervalUI(sec) {
+      ['gh-sync-interval', 'modal-gh-interval'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const val = String(sec);
+        let opt = Array.from(sel.options).find(o => o.value === val);
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = `每 ${sec} 秒自动同步`;
+          sel.appendChild(opt);
+        }
+        sel.value = val;
+      });
+    }
+
+    function updateCloudSyncInterval(val, fromModal = false) {
+      const sec = Math.max(0, Math.min(3600, parseInt(val, 10) || 0));
+      const finalSec = (sec > 0 && sec < 5) ? 5 : sec;
+      const cfg = loadLocalGhConfig();
+      cfg.autoSyncSec = finalSec;
+      saveLocalGhConfig(cfg);
+      syncGhIntervalUI(finalSec);
+      startGitHubCloudAutoSyncTimer();
+      showToast(finalSec > 0 ? `⏱️ 已保存 GitHub 云同步间隔：每 ${finalSec} 秒自动同步` : '⏸️ 已暂停定时云同步（仍支持手动同步）', 'info');
+    }
+
+    function applyCustomSyncInterval(fromModal = false) {
+      const inp = document.getElementById(fromModal ? 'modal-gh-custom' : 'gh-sync-custom');
+      const v = parseInt(inp && inp.value, 10);
+      if (!v || v < 5) {
+        showToast('请输入不小于 5 秒的自定义同步间隔！', 'warn');
+        return;
+      }
+      updateCloudSyncInterval(v, fromModal);
+    }
+
+    function onModalTokenInputChanged() {
+      const inp = document.getElementById('modal-gh-token');
+      const tok = inp ? inp.value.trim() : '';
+      const cfg = loadLocalGhConfig();
+      cfg.token = tok;
+      saveLocalGhConfig(cfg);
+      startGitHubCloudAutoSyncTimer();
+    }
+
+    async function runPeriodicGitHubCloudSync(force = false) {
+      const cfg = loadLocalGhConfig();
+      if (!cfg.token) return false;
+      const payloadStr = JSON.stringify(DB);
+      const curHash = simpleHash(payloadStr);
+      if (!force && curHash === lastCloudSyncHash && cfg.gistId) return true;
+
+      let gistId = cfg.gistId;
+      if (!gistId) {
+        const list = await ghRestCall('/gists?per_page=30', cfg.token, 'GET');
+        if (list.ok && Array.isArray(list.data)) {
+          const found = list.data.find(g => g.files && g.files['aethermon_cloud_vault.json']);
+          if (found) gistId = found.id;
+        }
+        if (!gistId) {
+          const created = await ghRestCall('/gists', cfg.token, 'POST', {
+            description: 'AetherMon Arena Private Cloud Save Vault',
+            public: false,
+            files: { 'aethermon_cloud_vault.json': { content: payloadStr } }
+          });
+          if (created.ok && created.data && created.data.id) {
+            gistId = created.data.id;
+          }
+        }
+        if (gistId) {
+          cfg.gistId = gistId;
+          saveLocalGhConfig(cfg);
+        }
+      }
+      if (!gistId) return false;
+
+      const patchRes = await ghRestCall(`/gists/${gistId}`, cfg.token, 'PATCH', {
+        description: 'AetherMon Arena Private Cloud Save Vault',
+        files: { 'aethermon_cloud_vault.json': { content: payloadStr } }
+      });
+      if (patchRes.ok) {
+        lastCloudSyncHash = curHash;
+        const now = new Date();
+        const tStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+        const stEl = document.getElementById('save-status-text');
+        if (stEl) stEl.textContent = `☁️ 云已同步 ${tStr} (${cfg.autoSyncSec}s)`;
+        const pill = document.getElementById('cloud-sync-pill');
+        if (pill) pill.textContent = `☁️ 每${cfg.autoSyncSec}s自动云同步`;
+        return true;
+      }
+      return false;
+    }
+
+    function startGitHubCloudAutoSyncTimer() {
+      if (cloudPeriodicTimer) {
+        clearInterval(cloudPeriodicTimer);
+        cloudPeriodicTimer = null;
+      }
+      const cfg = loadLocalGhConfig();
+      syncGhIntervalUI(cfg.autoSyncSec);
+      if (!cfg.token || !cfg.autoSyncSec || cfg.autoSyncSec <= 0) return;
+      const ms = Math.max(5000, cfg.autoSyncSec * 1000);
+      cloudPeriodicTimer = setInterval(() => {
+        runPeriodicGitHubCloudSync(false);
+      }, ms);
     }
 
     function utf8ToBase64Large(str) {
@@ -1911,6 +2047,8 @@
       const cfg = loadLocalGhConfig();
       const tokInput = document.getElementById('gh-token-input');
       if (tokInput && cfg.token) tokInput.value = cfg.token;
+      syncGhIntervalUI(cfg.autoSyncSec);
+      startGitHubCloudAutoSyncTimer();
       const pill = document.getElementById('cloud-sync-pill');
       if (!cfg.token || !cfg.gistId) return;
       if (pill) pill.textContent = '☁️ 正在同步GitHub云端...';
@@ -2000,7 +2138,8 @@
         });
       }
 
-      saveLocalGhConfig({ token, gistId, repo: cfg.repo || 'aethermon-arena' });
+      saveLocalGhConfig({ token, gistId, repo: cfg.repo || 'aethermon-arena', autoSyncSec: cfg.autoSyncSec });
+      startGitHubCloudAutoSyncTimer();
       persistAccounts(false);
       renderAuthScreen();
       if (currentUser && DB.accounts[currentUser.username]) {
@@ -2071,7 +2210,7 @@
         const owner = me.data.login;
         const pagesUrl = `https://${owner}.github.io/${repo}/`;
         const repoUrl  = `https://github.com/${owner}/${repo}`;
-        saveLocalGhConfig({ token, gistId: cfg.gistId || '', repo });
+        saveLocalGhConfig({ token, gistId: cfg.gistId || '', repo, autoSyncSec: cfg.autoSyncSec });
 
         if (statusEl) statusEl.textContent = `2/6 📦 正在创建并配置公开仓库 ${owner}/${repo} (设置主页与标签)...`;
         let repoInfo = await ghRestCall(`/repos/${owner}/${repo}`, token, 'GET');
@@ -2135,7 +2274,7 @@
           });
           if (gCreate.ok && gCreate.data) gistId = gCreate.data.id;
         }
-        saveLocalGhConfig({ token, gistId: gistId || '', repo });
+        saveLocalGhConfig({ token, gistId: gistId || '', repo, autoSyncSec: cfg.autoSyncSec });
 
         AudioFX.catchFanfare();
         if (statusEl) {
@@ -5130,9 +5269,21 @@
 
           <div class="space-y-2 pt-2 border-t border-slate-800">
             <div class="font-bold text-xs text-emerald-300">🚀 GitHub Pages 一键发布 & 私有 Gist 云端自动存档</div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input id="modal-gh-token" type="password" value="${loadLocalGhConfig().token || ''}" placeholder="粘贴 GitHub Token (Personal Access Token)" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 font-mono text-[11px] text-white" />
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input id="modal-gh-token" type="password" value="${loadLocalGhConfig().token || ''}" onchange="onModalTokenInputChanged()" placeholder="粘贴 GitHub Token (Personal Access Token)" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 font-mono text-[11px] text-white" />
               <input id="modal-gh-repo" type="text" value="${loadLocalGhConfig().repo || 'aethermon-arena'}" placeholder="仓库名: aethermon-arena" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 font-mono text-[11px] text-white" />
+              <div class="flex gap-1">
+                <select id="modal-gh-interval" onchange="updateCloudSyncInterval(this.value, true)" class="flex-1 px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-white">
+                  <option value="10" ${loadLocalGhConfig().autoSyncSec === 10 ? 'selected' : ''}>每 10 秒同步</option>
+                  <option value="30" ${loadLocalGhConfig().autoSyncSec === 30 ? 'selected' : ''}>每 30 秒同步 (默认)</option>
+                  <option value="60" ${loadLocalGhConfig().autoSyncSec === 60 ? 'selected' : ''}>每 60 秒同步</option>
+                  <option value="120" ${loadLocalGhConfig().autoSyncSec === 120 ? 'selected' : ''}>每 120 秒同步</option>
+                  <option value="0" ${loadLocalGhConfig().autoSyncSec === 0 ? 'selected' : ''}>暂停定时</option>
+                  ${![0,10,30,60,120].includes(loadLocalGhConfig().autoSyncSec) ? `<option value="${loadLocalGhConfig().autoSyncSec}" selected>每 ${loadLocalGhConfig().autoSyncSec} 秒</option>` : ''}
+                </select>
+                <input id="modal-gh-custom" type="number" min="5" max="3600" placeholder="秒" class="w-14 px-1.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-[11px] text-white" />
+                <button type="button" onclick="applyCustomSyncInterval(true)" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-indigo-200">定</button>
+              </div>
             </div>
             <div class="flex flex-wrap gap-2">
               <button type="button" id="btn-modal-gh-deploy" onclick="runInBrowserGitHubDeploy(true)" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black">🚀 一键发布到 GitHub Pages</button>
