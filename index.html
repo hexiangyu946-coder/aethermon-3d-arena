@@ -981,75 +981,98 @@
 
     const BGM_TRACKS = {
       town: {
-        name: '晴空微风',
-        bpm: 114,
-        // 32 8th-note/16th-note melodic steps (Fmaj7 -> G7 -> Em7 -> Am7 -> Dm7 -> G7 -> Cmaj7 -> C7)
-        stepDiv: 4, // 16th notes (64 steps = 4 bars)
+        name: '真新晴风镇',
+        bpm: 112,
+        stepDiv: 4,
         lead: [
-          77,0,76,0, 72,0,69,72, 77,0,81,0, 79,0,0,0,
-          79,0,77,0, 74,0,71,74, 79,0,83,0, 81,0,79,0,
-          76,0,79,0, 83,0,81,79, 81,0,76,0, 72,0,0,0,
-          74,0,76,0, 77,0,81,0,  79,0,74,0, 72,0,0,0
+          74,0,79,0, 81,0,83,0, 81,0,79,0, 78,0,74,0,
+          76,0,79,0, 83,0,81,79, 78,0,74,0, 71,0,0,0,
+          72,0,76,0, 79,0,78,76, 74,0,79,0, 83,0,81,0,
+          79,0,76,0, 74,0,78,0, 79,0,0,0,  0,0,0,0
+        ],
+        harmony: [
+          71,0,74,0, 76,0,79,0, 78,0,74,0, 74,0,71,0,
+          71,0,76,0, 79,0,76,74, 74,0,71,0, 67,0,0,0,
+          67,0,72,0, 76,0,74,72, 71,0,74,0, 79,0,78,0,
+          76,0,72,0, 71,0,74,0, 74,0,0,0,  0,0,0,0
         ],
         chords: [
-          [65,69,72,76], [67,71,74,77], [64,67,71,74], [69,72,76,79],
-          [62,65,69,72], [67,71,74,77], [60,64,67,71], [60,64,67,70]
+          [67,71,74,79], [66,69,74,78], [64,67,71,76], [59,62,66,71],
+          [60,64,67,72], [59,62,67,71], [57,60,64,69], [62,66,69,74]
         ],
         bass: [
-          41,0,0,48, 53,0,48,0,  43,0,0,50, 55,0,50,0,
-          40,0,0,47, 45,0,0,52,  38,0,45,0, 43,0,36,0
+          43,0,50,0, 42,0,50,0, 40,0,47,0, 35,0,42,0,
+          36,0,43,0, 35,0,43,0, 33,0,40,0, 38,0,45,50
         ],
         style: 'flute'
       },
       field: {
-        name: '帕底亚原野',
-        bpm: 132,
+        name: '帕底亚冒险路',
+        bpm: 134,
         stepDiv: 4,
         lead: [
-          74,0,79,0, 81,0,83,0, 86,0,83,79, 81,0,79,0,
-          78,0,74,0, 71,0,74,76, 79,0,76,0,  74,0,0,0,
-          76,0,79,0, 84,0,83,81, 79,0,74,0,  81,0,78,0,
-          79,0,83,0, 86,0,88,86, 83,0,81,0,  79,0,0,0
+          79,0,84,0, 83,0,79,81, 83,0,84,0, 86,0,0,0,
+          88,0,86,84, 83,0,79,0, 81,0,83,81, 79,0,0,0,
+          77,0,81,0, 84,0,83,81, 79,0,76,0, 79,0,84,0,
+          86,0,88,86, 84,0,83,81, 79,0,86,0, 84,0,0,0
+        ],
+        harmony: [
+          76,0,79,0, 79,0,76,77, 79,0,79,0, 83,0,0,0,
+          84,0,83,79, 79,0,76,0, 77,0,79,77, 74,0,0,0,
+          72,0,77,0, 81,0,79,77, 76,0,72,0, 76,0,79,0,
+          81,0,84,81, 79,0,79,77, 74,0,83,0, 79,0,0,0
         ],
         chords: [
-          [67,71,74,79], [67,71,74,79], [66,69,74,78], [64,67,71,76],
-          [60,64,67,72], [62,66,69,74], [67,71,74,79], [62,66,69,74]
+          [60,64,67,72], [67,71,74,79], [69,72,76,81], [64,67,71,76],
+          [65,69,72,77], [60,64,67,72], [62,65,69,74], [67,71,74,79]
         ],
         bass: [
-          43,0,43,50, 55,0,50,43, 42,0,42,49, 40,0,47,52,
-          36,0,36,43, 38,0,38,45, 43,0,50,55, 38,0,45,50
+          36,0,43,48, 43,0,50,55, 45,0,52,57, 40,0,47,52,
+          41,0,48,53, 36,0,43,48, 38,0,45,50, 43,0,50,55
         ],
         style: 'brass'
       },
       mystic: {
-        name: '太晶星渊',
-        bpm: 124,
+        name: '第零区星渊',
+        bpm: 126,
         stepDiv: 4,
         lead: [
-          79,0,86,0, 84,0,82,0, 79,0,75,0, 74,0,79,0,
-          80,0,87,0, 86,0,84,0, 79,0,75,0, 72,0,0,0,
-          77,0,84,0, 82,0,80,0, 79,0,77,75, 74,0,72,0,
-          74,0,75,0, 79,0,82,0, 86,0,84,0,  79,0,0,0
+          81,0,88,0, 86,0,84,0, 81,0,76,0, 79,0,83,0,
+          84,0,88,0, 91,0,88,0, 84,0,81,0, 79,0,0,0,
+          77,0,84,0, 83,0,81,0, 79,0,77,76, 74,0,79,0,
+          81,0,83,0, 84,0,88,0, 91,0,88,0, 84,0,0,0
+        ],
+        harmony: [
+          76,0,81,0, 79,0,76,0, 76,0,72,0, 74,0,79,0,
+          79,0,84,0, 86,0,84,0, 79,0,76,0, 74,0,0,0,
+          72,0,79,0, 77,0,76,0, 74,0,72,71, 69,0,74,0,
+          76,0,79,0, 81,0,84,0, 86,0,84,0, 79,0,0,0
         ],
         chords: [
-          [60,63,67,74], [60,63,67,70], [56,60,63,70], [56,60,63,67],
-          [53,56,60,67], [53,56,60,63], [55,59,62,68], [55,59,62,67]
+          [57,60,64,71], [55,59,62,67], [60,64,67,72], [55,59,62,67],
+          [53,57,60,67], [52,55,59,64], [50,53,57,62], [52,56,59,64]
         ],
         bass: [
-          36,0,0,36, 43,0,36,0, 32,0,0,32, 39,0,32,0,
-          29,0,0,29, 36,0,29,0, 31,0,0,31, 38,0,43,0
+          33,0,0,45, 43,0,38,0, 36,0,0,48, 43,0,38,0,
+          29,0,0,41, 28,0,40,0, 26,0,38,0, 28,0,40,44
         ],
         style: 'crystal'
       },
       battle_wild: {
-        name: '疾风对战',
-        bpm: 154,
+        name: '经典野生对战',
+        bpm: 158,
         stepDiv: 4,
         lead: [
-          81,76,81,83, 84,0,83,81, 79,74,79,81, 83,0,79,0,
-          77,72,77,79, 81,0,84,83, 81,0,76,0,  80,0,83,80,
-          81,76,81,84, 88,0,86,84, 83,79,83,86, 84,0,81,0,
-          77,81,84,88, 86,84,83,81, 80,76,80,83, 81,0,0,0
+          81,82,81,80, 81,0,76,0, 79,80,79,78, 79,0,74,0,
+          77,76,77,79, 81,0,84,83, 81,0,79,0,  76,0,80,83,
+          81,0,84,0,  88,0,86,84, 83,0,79,0,  86,0,84,83,
+          81,83,84,86, 88,86,84,83, 84,0,80,0, 81,0,0,0
+        ],
+        harmony: [
+          76,77,76,75, 76,0,72,0, 74,75,74,73, 74,0,71,0,
+          72,71,72,74, 76,0,79,78, 76,0,74,0,  71,0,76,79,
+          76,0,81,0,  84,0,83,81, 79,0,74,0,  83,0,81,79,
+          77,79,81,83, 84,83,81,79, 80,0,76,0, 76,0,0,0
         ],
         chords: [
           [69,72,76], [67,71,74], [65,69,72], [64,68,71],
@@ -1062,14 +1085,20 @@
         style: 'battle'
       },
       battle_boss: {
-        name: '王牌决战',
-        bpm: 166,
+        name: '道馆冠军激战',
+        bpm: 168,
         stepDiv: 4,
         lead: [
           76,0,79,83, 88,0,86,83, 84,0,79,76, 86,0,81,0,
           83,0,86,88, 91,0,88,86, 84,83,81,79, 78,0,83,78,
           79,0,83,86, 91,0,90,88, 86,0,83,79, 88,0,84,0,
           86,88,91,93, 91,88,86,83, 84,0,86,0, 88,0,0,0
+        ],
+        harmony: [
+          71,0,76,79, 83,0,83,79, 79,0,76,72, 81,0,78,0,
+          79,0,83,84, 86,0,84,83, 81,79,78,76, 74,0,78,74,
+          76,0,79,83, 86,0,86,84, 83,0,79,74, 84,0,81,0,
+          81,83,86,88, 86,84,83,79, 79,0,81,0, 83,0,0,0
         ],
         chords: [
           [64,67,71], [60,64,67], [62,66,69], [59,62,66],
@@ -1082,14 +1111,20 @@
         style: 'boss'
       },
       battle_terastal: {
-        name: '太晶璀璨',
-        bpm: 168,
+        name: '太晶璀璨决胜',
+        bpm: 170,
         stepDiv: 4,
         lead: [
           84,0,88,91, 96,0,95,91, 88,0,84,88, 91,0,86,0,
           84,0,88,91, 93,0,91,89, 88,86,84,83, 84,0,88,0,
           89,0,93,96, 98,0,96,93, 91,0,88,84, 91,0,86,0,
           89,91,93,96, 95,93,91,89, 88,0,91,0, 96,0,0,0
+        ],
+        harmony: [
+          79,0,84,88, 91,0,91,88, 84,0,79,84, 86,0,83,0,
+          79,0,84,88, 89,0,88,84, 84,83,79,79, 79,0,84,0,
+          84,0,89,93, 93,0,91,89, 88,0,84,79, 86,0,83,0,
+          84,88,89,93, 91,89,88,84, 84,0,86,0, 91,0,0,0
         ],
         chords: [
           [60,64,67,72], [67,71,74,79], [69,72,76,81], [65,69,72,77],
@@ -1144,18 +1179,45 @@
             this.sfxGain.gain.value = 0.72;
             this.sfxGain.connect(this.masterGain);
 
-            // Lush spatial stereo-like slapback echo for melodic synths
+            // Lush Stereo Hall Reverb (0.95s synthesized impulse) + Slapback Echo for Pokémon-grade warmth
+            try {
+              const revLen = Math.floor(this.ctx.sampleRate * 0.95);
+              const revBuf = this.ctx.createBuffer(2, revLen, this.ctx.sampleRate);
+              for (let ch = 0; ch < 2; ch++) {
+                const cd = revBuf.getChannelData(ch);
+                for (let i = 0; i < revLen; i++) {
+                  cd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / revLen, 2.6) * 0.45;
+                }
+              }
+              this.reverbNode = this.ctx.createConvolver();
+              this.reverbNode.buffer = revBuf;
+              const revGain = this.ctx.createGain();
+              revGain.gain.value = 0.24;
+              this.reverbNode.connect(revGain);
+              revGain.connect(this.bgmGain);
+            } catch (e) {}
+
             this.delayNode = this.ctx.createDelay(0.6);
-            this.delayNode.delayTime.value = 0.21;
+            this.delayNode.delayTime.value = 0.19;
             const fb = this.ctx.createGain();
-            fb.gain.value = 0.26;
+            fb.gain.value = 0.24;
             const dFilter = this.ctx.createBiquadFilter();
             dFilter.type = 'lowpass';
-            dFilter.frequency.value = 2500;
+            dFilter.frequency.value = 2600;
             this.delayNode.connect(dFilter);
             dFilter.connect(fb);
             fb.connect(this.delayNode);
             dFilter.connect(this.bgmGain);
+            if (this.reverbNode) dFilter.connect(this.reverbNode);
+
+            // Auto-recover when iOS interrupts or suspends audio session
+            this.ctx.onstatechange = () => {
+              if (this.enabled && this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
+                this.resumeIOSAudio(false);
+              } else if (this.ctx && this.ctx.state === 'running') {
+                this.nextNoteTime = this.ctx.currentTime + 0.04;
+              }
+            };
 
             // Prebuild 1.5s white/pink hybrid noise buffer for drums & elemental SFX
             const len = Math.floor(this.ctx.sampleRate * 1.5);
@@ -1170,11 +1232,33 @@
               data[i] = (b0 + b1 + b2 + white * 0.38) * 0.42;
             }
           }
-          if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+          if (this.ctx && this.ctx.state !== 'running') {
+            this.resumeIOSAudio(true);
           }
           if (!this.seqTimer) {
             this.startSequencer();
+          }
+        } catch (e) {}
+      },
+
+      resumeIOSAudio(fromGesture = false) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
+            const p = this.ctx.resume();
+            if (p && p.then) {
+              p.then(() => {
+                if (this.ctx) this.nextNoteTime = this.ctx.currentTime + 0.05;
+              }).catch(() => {});
+            }
+          }
+          if (fromGesture) {
+            const silent = this.ctx.createBuffer(1, 1, this.ctx.sampleRate || 22050);
+            const srcNode = this.ctx.createBufferSource();
+            srcNode.buffer = silent;
+            srcNode.connect(this.ctx.destination);
+            srcNode.start(0);
+            this.nextNoteTime = this.ctx.currentTime + 0.05;
           }
         } catch (e) {}
       },
@@ -1225,6 +1309,9 @@
           }
           const track = BGM_TRACKS[this.currentTrackKey] || BGM_TRACKS.town;
           const secPerStep = (60 / track.bpm) / 4; // 16th note
+          if (Math.abs(this.ctx.currentTime - this.nextNoteTime) > 0.45) {
+            this.nextNoteTime = this.ctx.currentTime + 0.04;
+          }
           while (this.nextNoteTime < this.ctx.currentTime + 0.14) {
             this.scheduleStep(track, this.stepIdx, this.nextNoteTime, secPerStep);
             this.nextNoteTime += secPerStep;
@@ -1238,10 +1325,18 @@
         const barIdx = Math.floor(step / 8) % track.chords.length;
         const chord = track.chords[barIdx];
 
-        // 1. Lead Voice
+        // 1. Dual-Voice Pokémon Lead + Harmony Counter-Melody + Warm Pad Chord on bar downbeats
         const leadMidi = track.lead[step];
         if (leadMidi > 0) {
-          this.playSynthVoice(midiToFreq(leadMidi), t, stepDur * 1.85, track.style);
+          this.playSynthVoice(midiToFreq(leadMidi), t, stepDur * 1.9, track.style, 1.0);
+        }
+        if (track.harmony && track.harmony[step] > 0) {
+          this.playSynthVoice(midiToFreq(track.harmony[step]), t, stepDur * 1.75, track.style, 0.48);
+        }
+        if (step % 8 === 0) {
+          chord.slice(0, 3).forEach(cm => {
+            this.playPluck(midiToFreq(cm), t, stepDur * 7.2, 0.024, 'triangle', 1250);
+          });
         }
 
         // 2. Chord Arpeggio / Pluck Harmony
@@ -1293,7 +1388,7 @@
         }
       },
 
-      playSynthVoice(freq, t, dur, style) {
+      playSynthVoice(freq, t, dur, style, gainMult = 1.0) {
         try {
           const osc1 = this.ctx.createOscillator();
           const osc2 = this.ctx.createOscillator();
@@ -1329,7 +1424,7 @@
           osc1.frequency.setValueAtTime(freq, t);
           osc2.frequency.setValueAtTime(freq, t);
 
-          const peak = style === 'flute' ? 0.095 : 0.075;
+          const peak = (style === 'flute' ? 0.092 : 0.072) * gainMult;
           gain.gain.setValueAtTime(0.0008, t);
           gain.gain.linearRampToValueAtTime(peak, t + 0.018);
           gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -1339,6 +1434,7 @@
           filt.connect(gain);
           gain.connect(this.bgmGain);
           if (this.delayNode) gain.connect(this.delayNode);
+          if (this.reverbNode) gain.connect(this.reverbNode);
 
           osc1.start(t);
           osc2.start(t);
@@ -1684,14 +1780,34 @@
       }
     }
 
-    // Unlock Web Audio & start BGM on very first user tap/keypress anywhere
-    ['pointerdown', 'keydown'].forEach(evName => {
-      window.addEventListener(evName, function unlockOnce() {
+    // Unlock & Recover Web Audio on iOS Safari / Mobile Browsers (foreground, touch, click, pageshow)
+    ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evName => {
+      window.addEventListener(evName, function unlockAudioOnGesture() {
+        if (!AudioFX.enabled) return;
+        AudioFX.init();
+        if (AudioFX.ctx && AudioFX.ctx.state !== 'running') {
+          AudioFX.resumeIOSAudio(true);
+        }
+        AudioFX.syncContextBGM();
+      }, { capture: true, passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && AudioFX.enabled) {
+        AudioFX.init();
+        AudioFX.resumeIOSAudio(false);
+        AudioFX.syncContextBGM();
+      }
+    });
+
+    ['pageshow', 'focus'].forEach(evName => {
+      window.addEventListener(evName, () => {
         if (AudioFX.enabled) {
           AudioFX.init();
+          AudioFX.resumeIOSAudio(false);
           AudioFX.syncContextBGM();
         }
-      }, { once: false, passive: true });
+      });
     });
 
     // =========================================================================
