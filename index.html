@@ -281,6 +281,9 @@
         <button type="button" id="btn-bgm-cycle" onclick="cycleBgmTrack()" class="px-2.5 py-1.5 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/45 border border-fuchsia-400/40 text-fuchsia-100 text-xs font-bold transition" title="切换背景音乐曲目">
           🎵 自动配乐
         </button>
+        <button type="button" id="btn-bgm-custom" onclick="openCustomBgmModal()" class="px-2 py-1.5 rounded-xl bg-sky-600/25 hover:bg-sky-600/45 border border-sky-400/40 text-sky-100 text-xs font-bold transition" title="导入朱紫MP3或GitHub音乐">
+          🎧 换原声MP3
+        </button>
         <button type="button" id="btn-audio-toggle" onclick="toggleAudio()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition">
           🔊 音效开
         </button>
@@ -334,6 +337,9 @@
           </button>
           <button type="button" id="btn-ow-mount" onclick="toggleRideMount()" class="px-2.5 py-1.5 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 border border-violet-400/40 text-violet-100 text-xs font-bold transition">
             🐉 骑乘神兽 (R)
+          </button>
+          <button type="button" id="btn-ow-mount-pick" onclick="openMountPickerModal()" class="px-2 py-1.5 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/45 border border-fuchsia-400/40 text-fuchsia-100 text-xs font-bold transition" title="更换不同造型的3D神兽坐骑">
+            换坐骑
           </button>
           <button type="button" id="btn-ow-letsgo" onclick="triggerLetsGoBattle()" class="px-2.5 py-1.5 rounded-xl bg-amber-500/25 hover:bg-amber-500/45 border border-amber-400/40 text-amber-200 text-xs font-bold transition">
             ⚡ Let's Go 速战 (F)
@@ -1144,6 +1150,10 @@
       ctx: null,
       enabled: true,
       bgmMode: 'auto',
+      customUrls: {},
+      missingRepoTracks: {},
+      mp3El: null,
+      mp3PlayingKey: null,
       currentTrackKey: null,
       masterGain: null,
       bgmGain: null,
@@ -1260,6 +1270,10 @@
             srcNode.start(0);
             this.nextNoteTime = this.ctx.currentTime + 0.05;
           }
+          if (this.mp3El && this.mp3PlayingKey && this.mp3El.paused) {
+            const p = this.mp3El.play();
+            if (p && p.catch) p.catch(() => {});
+          }
         } catch (e) {}
       },
 
@@ -1283,6 +1297,62 @@
         return 'field';
       },
 
+      loadCustomBgmConfig() {
+        try {
+          const raw = localStorage.getItem('aethermon_custom_bgm_v1');
+          if (raw) this.customUrls = JSON.parse(raw);
+        } catch (e) {}
+      },
+
+      ensureMp3Element() {
+        if (this.mp3El) return this.mp3El;
+        try {
+          const a = new Audio();
+          a.loop = true;
+          a.volume = 0.55;
+          a.playsInline = true;
+          a.preload = 'auto';
+          a.onerror = () => {
+            if (this.mp3PlayingKey) {
+              this.missingRepoTracks[this.mp3PlayingKey] = true;
+              this.mp3PlayingKey = null;
+            }
+          };
+          this.mp3El = a;
+        } catch (e) {}
+        return this.mp3El;
+      },
+
+      tryPlayMp3ForTrack(key) {
+        if (!this.enabled) return false;
+        const customUrl = this.customUrls && this.customUrls[key];
+        const isHttp = (typeof location !== 'undefined' && /^https?:/i.test(location.protocol));
+        const candidate = customUrl || (isHttp && !this.missingRepoTracks[key] ? `bgm/${key}.mp3` : '');
+        if (!candidate) {
+          if (this.mp3El && !this.mp3El.paused) {
+            this.mp3El.pause();
+            this.mp3PlayingKey = null;
+          }
+          return false;
+        }
+        const a = this.ensureMp3Element();
+        if (!a) return false;
+        if (this.mp3PlayingKey !== key || a.datasetKey !== candidate) {
+          this.mp3PlayingKey = key;
+          a.datasetKey = candidate;
+          a.src = candidate;
+          const p = a.play();
+          if (p && p.catch) p.catch(() => {
+            if (!customUrl) this.missingRepoTracks[key] = true;
+            this.mp3PlayingKey = null;
+          });
+        } else if (a.paused) {
+          const p = a.play();
+          if (p && p.catch) p.catch(() => {});
+        }
+        return true;
+      },
+
       syncContextBGM() {
         if (!this.enabled) return;
         this.init();
@@ -1294,6 +1364,7 @@
             this.nextNoteTime = this.ctx.currentTime + 0.04;
           }
         }
+        this.tryPlayMp3ForTrack(nextKey);
       },
 
       startSequencer() {
@@ -1302,6 +1373,7 @@
         this.nextNoteTime = this.ctx.currentTime + 0.05;
         this.seqTimer = setInterval(() => {
           if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
+          if (this.mp3El && !this.mp3El.paused && this.mp3PlayingKey === this.desiredTrackKey()) return;
           const targetKey = this.desiredTrackKey();
           if (targetKey !== this.currentTrackKey) {
             this.currentTrackKey = targetKey;
@@ -1755,13 +1827,75 @@
       AudioFX.enabled = !AudioFX.enabled;
       const btn = document.getElementById('btn-audio-toggle');
       if (btn) btn.textContent = AudioFX.enabled ? '🔊 音效开' : '🔇 静音中';
-      if (!AudioFX.enabled && AudioFX.ctx && AudioFX.ctx.state === 'running') {
-        try { AudioFX.ctx.suspend(); } catch (e) {}
+      if (!AudioFX.enabled) {
+        if (AudioFX.mp3El) { try { AudioFX.mp3El.pause(); } catch (e) {} }
+        if (AudioFX.ctx && AudioFX.ctx.state === 'running') {
+          try { AudioFX.ctx.suspend(); } catch (e) {}
+        }
       } else if (AudioFX.enabled) {
         AudioFX.init();
         AudioFX.syncContextBGM();
         AudioFX.click();
       }
+    }
+
+
+    function openCustomBgmModal() {
+      AudioFX.click();
+      AudioFX.loadCustomBgmConfig();
+      const keys = Object.keys(BGM_TRACKS);
+      openModal(
+        '🎧 导入《宝可梦 朱／紫》或自定义 MP3 配乐',
+        `<div class="space-y-3">
+          <div class="p-3 rounded-xl bg-indigo-950/60 border border-indigo-400/35 text-xs text-slate-200 leading-relaxed space-y-1">
+            <div><strong>方法 A（GitHub 仓库永久生效）</strong>：在你的 GitHub 仓库新建 <code class="text-amber-300">bgm/</code> 文件夹，上传对应 MP3（如 <code class="text-emerald-300">bgm/field.mp3</code>、<code class="text-emerald-300">bgm/battle_wild.mp3</code>、<code class="text-emerald-300">bgm/battle_boss.mp3</code>、<code class="text-emerald-300">bgm/battle_terastal.mp3</code>），游戏会自动优先播放你的原声 MP3！</div>
+            <div><strong>方法 B（手机/电脑本地即刻导入试听）</strong>：直接在下方为任意场景选择本地 MP3/OGG/WAV 文件，立刻替换播放。</div>
+          </div>
+          <div class="space-y-2">
+            ${keys.map(k => {
+              const tr = BGM_TRACKS[k];
+              const hasCustom = AudioFX.customUrls && AudioFX.customUrls[k];
+              return `<div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="text-xs font-extrabold text-white">🎵 ${tr.name} <span class="text-[10px] font-mono text-slate-400">(bgm/${k}.mp3)</span></div>
+                  <div class="text-[10px] ${hasCustom ? 'text-emerald-300' : 'text-slate-400'}">${hasCustom ? '✅ 已挂载自定义音频' : '当前使用内置多声道合成器'}</div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <label class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold cursor-pointer">
+                    选择MP3
+                    <input type="file" accept="audio/*" class="hidden" onchange="handlePickLocalBgmFile('${k}', this)" />
+                  </label>
+                  ${hasCustom ? `<button type="button" onclick="clearCustomBgmTrack('${k}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-rose-200 text-[11px]">还原</button>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`
+      );
+    }
+
+    function handlePickLocalBgmFile(trackKey, inputEl) {
+      const file = inputEl && inputEl.files && inputEl.files[0];
+      if (!file) return;
+      const objUrl = URL.createObjectURL(file);
+      AudioFX.customUrls[trackKey] = objUrl;
+      AudioFX.missingRepoTracks[trackKey] = false;
+      AudioFX.bgmMode = trackKey;
+      AudioFX.syncContextBGM();
+      const btn = document.getElementById('btn-bgm-cycle');
+      if (btn) btn.textContent = '🎵 ' + BGM_TRACKS[trackKey].name;
+      showToast(`🎧 已加载【${file.name}】并立即播放！`, 'success');
+      openCustomBgmModal();
+    }
+
+    function clearCustomBgmTrack(trackKey) {
+      delete AudioFX.customUrls[trackKey];
+      if (AudioFX.mp3El && AudioFX.mp3PlayingKey === trackKey) {
+        AudioFX.mp3El.pause();
+        AudioFX.mp3PlayingKey = null;
+      }
+      AudioFX.syncContextBGM();
+      openCustomBgmModal();
     }
 
     function cycleBgmTrack() {
@@ -5341,6 +5475,7 @@
       document.getElementById('game-shell').classList.remove('hidden');
       ensureUserOpenWorldFields(acc);
       initOpenWorldForUser();
+      if (typeof GL3D !== 'undefined' && GL3D.rebuildMountMesh) GL3D.rebuildMountMesh(acc.mountId || 'koraidon');
       switchMainView('world');
       renderAllMainViews();
     }
@@ -6474,6 +6609,50 @@
           buffEl.classList.add('hidden');
         }
       }
+    }
+
+
+    const RIDE_MOUNT_LIST = [
+      { id: 'koraidon', name: '绯红翼龙 (朱风霸主)', icon: '🔥', desc: '绯红鳞甲配黄金羽翼与胸轮图腾，疾驰时四足奔腾振翅！' },
+      { id: 'miraidon', name: '紫电未来龙 (紫风摩托)', icon: '⚡', desc: '金属紫电与青色等离子喷射翼，悬浮反重力疾驰！' },
+      { id: 'pegasus',  name: '苍穹圣天马 (独角翼兽)', icon: '🦄', desc: '纯白圣甲、黄金独角与天使双翼，优雅高贵！' },
+      { id: 'fenrir',   name: '极光冰霜狼 (霜晶巨兽)', icon: '❄️', desc: '苍蓝装甲搭配极光冰晶背翼，寒风呼啸而过！' }
+    ];
+
+    function openMountPickerModal() {
+      if (!currentUser) return;
+      AudioFX.click();
+      const cur = currentUser.mountId || 'koraidon';
+      openModal(
+        '🐉 选择你的 3D 传说神兽坐骑',
+        `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          ${RIDE_MOUNT_LIST.map(mt => {
+            const active = mt.id === cur;
+            return `<button type="button" onclick="selectRideMount('${mt.id}')" class="p-3 rounded-2xl border text-left transition ${active ? 'bg-violet-950/80 border-violet-400 shadow-lg' : 'bg-slate-900/85 hover:bg-slate-800 border-slate-700'}">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-sm text-white">${mt.icon} ${mt.name}</span>
+                ${active ? '<span class="text-[11px] px-2 py-0.5 rounded-full bg-violet-500 text-white font-bold">装备中</span>' : ''}
+              </div>
+              <p class="text-xs text-slate-300 mt-1 leading-relaxed">${mt.desc}</p>
+            </button>`;
+          }).join('')}
+        </div>`
+      );
+    }
+
+    function selectRideMount(mountId) {
+      if (!currentUser) return;
+      currentUser.mountId = mountId;
+      if (!OW.riding) OW.riding = true;
+      if (typeof GL3D !== 'undefined' && GL3D.rebuildMountMesh) {
+        GL3D.rebuildMountMesh(mountId);
+      }
+      AudioFX.evolve();
+      persistAccounts(false);
+      updateOpenWorldHUD();
+      closeModal();
+      const info = RIDE_MOUNT_LIST.find(x => x.id === mountId);
+      showToast(`🐉 已切换并召唤【${info ? info.name : mountId}】！`, 'success');
     }
 
     function toggleRideMount() {
@@ -7751,50 +7930,135 @@
         return g;
       },
 
-      createCyberMount3D() {
+      createRideMount3D(mountId = 'koraidon') {
         const g = new THREE.Group();
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x6d28d9, metalness: 0.35, roughness: 0.3, emissive: 0x2e1065, emissiveIntensity: 0.35 });
-        const neonMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-        const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.6, roughness: 0.25 });
+        const cfgMap = {
+          koraidon: { body: 0xdc2626, accent: 0xfbbf24, glow: 0xf97316, wing: 0xfef08a, isJet: false, isHorn: false },
+          miraidon: { body: 0x5b21b6, accent: 0x38bdf8, glow: 0x22d3ee, wing: 0x38bdf8, isJet: true,  isHorn: false },
+          pegasus:  { body: 0xf8fafc, accent: 0xfbbf24, glow: 0xfef08a, wing: 0xffffff, isJet: false, isHorn: true  },
+          fenrir:   { body: 0x0284c7, accent: 0x67e8f9, glow: 0xa5f3fc, wing: 0x7dd3fc, isJet: false, isHorn: false }
+        };
+        const cfg = cfgMap[mountId] || cfgMap.koraidon;
 
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 1.25, 12), bodyMat);
-        body.rotation.x = Math.PI / 2;
-        body.position.y = 0.42;
-        body.castShadow = true;
-        g.add(body);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: cfg.body, roughness: 0.32, metalness: cfg.isJet ? 0.55 : 0.18 });
+        const accMat  = new THREE.MeshStandardMaterial({ color: cfg.accent, roughness: 0.25, metalness: 0.5, emissive: cfg.glow, emissiveIntensity: 0.25 });
+        const glowMat = new THREE.MeshBasicMaterial({ color: cfg.glow });
 
-        // Dragon Neck & Crest Head (+Z forward)
-        const head = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.58, 8), bodyMat);
-        head.rotation.x = Math.PI * 0.38;
-        head.position.set(0, 0.78, 0.68);
-        g.add(head);
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 1.32, 14), bodyMat);
+        torso.rotation.x = Math.PI / 2;
+        torso.position.set(0, 0.56, 0);
+        torso.castShadow = true;
+        g.add(torso);
 
-        const crest = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), goldMat);
-        crest.position.set(0, 0.96, 0.54);
-        g.add(crest);
+        const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.12, 0.56), accMat);
+        saddle.position.set(0, 0.85, -0.04);
+        g.add(saddle);
 
-        // Glowing Energy Wings
-        const wingGeo = new THREE.BufferGeometry();
-        const verts = new Float32Array([
-          0, 0, 0,   0.95, 0.45, -0.35,   0.55, 0.05, -0.65
-        ]);
-        wingGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-        wingGeo.computeVertexNormals();
-        const wingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.72, side: THREE.DoubleSide });
-        const wingL = new THREE.Mesh(wingGeo, wingMat);
-        const wingR = wingL.clone();
-        wingR.scale.x = -1;
-        wingL.position.set(0.22, 0.58, 0.05);
-        wingR.position.set(-0.22, 0.58, 0.05);
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.08, 10, 24), accMat);
+        wheel.rotation.y = Math.PI / 2;
+        wheel.position.set(0, 0.58, 0.54);
+        g.add(wheel);
+
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.62, 12), bodyMat);
+        neck.rotation.x = 0.55;
+        neck.position.set(0, 0.86, 0.68);
+        neck.castShadow = true;
+        g.add(neck);
+
+        const headGrp = new THREE.Group();
+        headGrp.position.set(0, 1.12, 0.92);
+        const skull = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.52), bodyMat);
+        const snout = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.36, 6), bodyMat);
+        snout.rotation.x = Math.PI / 2;
+        snout.position.set(0, -0.02, 0.34);
+        headGrp.add(skull, snout);
+
+        [-0.14, 0.14].forEach(ex => {
+          const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.16), glowMat);
+          eye.position.set(ex, 0.04, 0.16);
+          headGrp.add(eye);
+        });
+
+        if (cfg.isHorn) {
+          const horn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.52, 8), accMat);
+          horn.rotation.x = 0.35;
+          horn.position.set(0, 0.28, 0.15);
+          headGrp.add(horn);
+        } else {
+          [-1, 1].forEach(side => {
+            const horn = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.55, 7), accMat);
+            horn.rotation.x = -0.75;
+            horn.rotation.z = -side * 0.28;
+            horn.position.set(side * 0.16, 0.2, -0.18);
+            headGrp.add(horn);
+          });
+        }
+        g.add(headGrp);
+
+        const makeWing = (side) => {
+          const wg = new THREE.Group();
+          const span = cfg.isJet ? 0.95 : 1.25;
+          const wMat = new THREE.MeshStandardMaterial({
+            color: cfg.wing,
+            emissive: cfg.glow,
+            emissiveIntensity: 0.35,
+            transparent: true,
+            opacity: cfg.isJet ? 0.82 : 0.94,
+            side: THREE.DoubleSide
+          });
+          for (let f = 0; f < 3; f++) {
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(span - f * 0.22, 0.04, 0.26), wMat);
+            blade.position.set(side * (0.52 - f * 0.08), 0.12 - f * 0.08, -0.15 - f * 0.18);
+            blade.rotation.y = -side * (0.25 + f * 0.16);
+            wg.add(blade);
+          }
+          wg.position.set(side * 0.22, 0.82, 0.08);
+          return wg;
+        };
+        const wingL = makeWing(1);
+        const wingR = makeWing(-1);
         g.add(wingL, wingR);
 
-        // Neon Plasma Thruster Ring
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 8, 20), neonMat);
-        ring.position.set(0, 0.44, -0.68);
+        const legMeshes = [];
+        if (cfg.isJet) {
+          [-0.28, 0.28].forEach(lx => {
+            const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.65, 10), accMat);
+            pod.rotation.x = Math.PI / 2;
+            pod.position.set(lx, 0.42, -0.52);
+            const jet = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.04, 8, 16), glowMat);
+            jet.position.set(lx, 0.42, -0.86);
+            g.add(pod, jet);
+          });
+        } else {
+          const legPositions = [[-0.26, 0.3, 0.42], [0.26, 0.3, 0.42], [-0.26, 0.3, -0.42], [0.26, 0.3, -0.42]];
+          legPositions.forEach(([lx, ly, lz]) => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.56, 8), bodyMat);
+            leg.position.set(lx, ly, lz);
+            leg.castShadow = true;
+            g.add(leg);
+            legMeshes.push(leg);
+          });
+        }
+
+        const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.85, 8), accMat);
+        tail.rotation.x = -Math.PI * 0.62;
+        tail.position.set(0, 0.68, -0.88);
+        g.add(tail);
+
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.04, 8, 22), glowMat);
+        ring.position.set(0, 0.56, -0.78);
         g.add(ring);
 
-        g.userData = { wingL, wingR, ring };
+        g.userData = { wingL, wingR, ring, legs: legMeshes, headGrp, isJet: cfg.isJet };
         return g;
+      },
+
+      rebuildMountMesh(mountId) {
+        if (!this.owReady || !this.owPlayerGroup) return;
+        if (this.owMountGroup) this.owPlayerGroup.remove(this.owMountGroup);
+        this.owMountGroup = this.createRideMount3D(mountId);
+        this.owMountGroup.visible = !!OW.riding;
+        this.owPlayerGroup.add(this.owMountGroup);
       },
 
       initOpenWorld3D() {
@@ -7837,7 +8101,7 @@
           // Player + Mount + Partner
           this.owPlayerGroup = new THREE.Group();
           this.owHuman = this.createChibiHuman3D(0x4f46e5, 0xf59e0b, 0xef4444);
-          this.owMountGroup = this.createCyberMount3D();
+          this.owMountGroup = this.createRideMount3D((currentUser && currentUser.mountId) || 'koraidon');
           this.owMountGroup.visible = false;
           this.owPlayerGroup.add(this.owMountGroup, this.owHuman);
           this.owScene.add(this.owPlayerGroup);
@@ -8174,21 +8438,31 @@
         this.owPlayerGroup.position.set(px3, onWater ? 0.08 + Math.sin(now * 0.006) * 0.05 : 0, pz3);
         this.owPlayerGroup.rotation.y = OW.yaw || 0;
         this.owMountGroup.visible = !!OW.riding;
-        this.owHuman.position.y = OW.riding ? 0.42 : 0;
+        const md = this.owMountGroup.userData || {};
+        const hoverY = (OW.riding && md.isJet) ? Math.sin(now * 0.008) * 0.1 : 0;
+        this.owMountGroup.position.y = hoverY;
+        this.owHuman.position.y = OW.riding ? (0.62 + hoverY) : 0;
 
-        // Animate Human Limbs & Cyber Mount Wings
         const moving = !!(OW.keys['KeyW'] || OW.keys['KeyA'] || OW.keys['KeyS'] || OW.keys['KeyD'] || OW.keys['ArrowUp'] || OW.keys['ArrowDown'] || OW.keys['ArrowLeft'] || OW.keys['ArrowRight'] || OW.touchDir.x || OW.touchDir.y || OW.clickTarget);
         const swing = moving ? Math.sin(OW.walkCycle * 1.2) * 0.55 : 0;
         const limbs = this.owHuman.userData;
-        limbs.legL.rotation.x = OW.riding ? -0.5 : swing;
-        limbs.legR.rotation.x = OW.riding ? -0.5 : -swing;
-        limbs.armL.rotation.x = -swing * 0.7;
-        limbs.armR.rotation.x = swing * 0.7;
+        limbs.legL.rotation.x = OW.riding ? -0.65 : swing;
+        limbs.legR.rotation.x = OW.riding ? -0.65 : -swing;
+        limbs.armL.rotation.x = OW.riding ? -0.45 : -swing * 0.7;
+        limbs.armR.rotation.x = OW.riding ? -0.45 : swing * 0.7;
 
-        if (OW.riding) {
-          const flap = Math.sin(now * 0.012) * 0.32;
-          this.owMountGroup.userData.wingL.rotation.z = flap;
-          this.owMountGroup.userData.wingR.rotation.z = -flap;
+        if (OW.riding && md.wingL) {
+          const flap = Math.sin(now * (moving ? 0.014 : 0.007)) * (md.isJet ? 0.14 : 0.34);
+          md.wingL.rotation.z = flap;
+          md.wingR.rotation.z = -flap;
+          if (md.legs && md.legs.length === 4) {
+            const gSwing = moving ? Math.sin(OW.walkCycle * 1.35) * 0.65 : 0;
+            md.legs[0].rotation.x = gSwing;
+            md.legs[1].rotation.x = -gSwing;
+            md.legs[2].rotation.x = -gSwing;
+            md.legs[3].rotation.x = gSwing;
+          }
+          if (md.ring) md.ring.rotation.z = now * 0.006;
         }
 
         // Update Walking Partner #1 Lead Monster
