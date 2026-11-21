@@ -528,9 +528,14 @@
               <div class="text-xs text-slate-400">当前排位积分 / 战绩</div>
               <div class="text-lg font-black text-white"><span id="rank-elo-num">1000</span> <span class="text-xs font-normal text-slate-400 ml-1" id="rank-record">0胜 0负</span></div>
             </div>
-            <button type="button" id="btn-find-ranked" onclick="startRankedMatchmaking()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg transition">
-              ⚔️ 匹配排位对手 (Lv.50 3v3)
-            </button>
+            <div class="flex flex-col sm:flex-row gap-1.5">
+              <button type="button" id="btn-find-ranked" onclick="startRankedMatchmaking(false)" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-lg transition">
+                ⚔️ 单打排位 (3v3)
+              </button>
+              <button type="button" id="btn-find-doubles-vgc" onclick="startRankedMatchmaking(true)" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 hover:from-fuchsia-400 hover:to-indigo-400 text-white font-black text-xs shadow-lg transition">
+                ⚔️ 2v2 双打排位 (VGC)
+              </button>
+            </div>
           </div>
           <div class="pt-1 space-y-2 border-t border-slate-800/80">
             <div class="flex items-center justify-between">
@@ -565,8 +570,9 @@
             <div>
               <label for="hotseat-rule-select" class="block text-[11px] text-slate-400 mb-1">等级与赛制</label>
               <select id="hotseat-rule-select" class="w-full px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
-                <option value="flat50_3v3">Lv.50 锦标赛 3v3</option>
-                <option value="flat50_6v6">Lv.50 全队对决</option>
+                <option value="doubles_vgc">⚔️ VGC 2v2 双打对战 (Lv.50 4v4)</option>
+                <option value="flat50_3v3">Lv.50 单打锦标赛 3v3</option>
+                <option value="flat50_6v6">Lv.50 单打全队对决</option>
               </select>
             </div>
           </div>
@@ -643,7 +649,9 @@
         <div class="flex items-center gap-2">
           <span id="btl-mode-tag" class="px-2.5 py-0.5 rounded-full bg-indigo-600/40 border border-indigo-400/40 text-indigo-200 font-bold">野外遭遇战</span>
           <span id="btl-weather-tag" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold">☀️ 晴朗无风</span>
+          <span id="btl-field-tag" class="hidden px-2.5 py-0.5 rounded-full bg-fuchsia-600/35 border border-fuchsia-400/40 text-fuchsia-100 font-bold"></span>
           <span id="btl-turn-num" class="text-slate-400 font-semibold">第 1 回合</span>
+          <button type="button" id="btn-btl-cam" onclick="cycleBattleCameraAngle()" class="px-2 py-0.5 rounded-full bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-100 font-bold">🎥 动态运镜</button>
         </div>
         <div class="flex items-center gap-2">
           <span id="btl-timer-tag" class="hidden px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold">⏱ 45s</span>
@@ -684,6 +692,26 @@
           </div>
         </div>
 
+        <!-- Second Opponent HUD for 2v2 Double Battles -->
+        <div id="foe-hud-2" class="hidden absolute z-20 top-2.5 right-2.5 sm:top-4 sm:right-4 w-52 sm:w-64 glass-card rounded-xl p-2 shadow-lg border border-rose-500/30 pointer-events-none">
+          <div class="flex items-center justify-between gap-1">
+            <div class="flex items-center gap-1 truncate">
+              <span id="foe2-name" class="font-extrabold text-xs text-white truncate">对手2</span>
+              <span id="foe2-shiny" class="hidden text-amber-300 text-xs">✨</span>
+            </div>
+            <span id="foe2-lv" class="text-[11px] font-bold text-amber-300 shrink-0">Lv.50</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-1 my-1">
+            <div id="foe2-types" class="flex gap-1"></div>
+            <span id="foe2-tera-badge" class="hidden px-1.5 py-0.2 rounded bg-fuchsia-500/30 text-fuchsia-100 text-[10px] font-black"></span>
+            <span id="foe2-status" class="hidden px-1.5 py-0.2 rounded text-[10px] font-bold"></span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+            <div id="foe2-hp-bar" class="hp-bar-fill h-full bg-emerald-500" style="width: 100%"></div>
+          </div>
+          <div class="text-[10px] text-slate-300 mt-0.5" id="foe2-hp-text">100%</div>
+        </div>
+
         <!-- Ally HUD (Bottom Right) -->
         <div id="ally-hud" class="absolute z-20 bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 w-60 sm:w-72 glass-card rounded-xl p-2.5 shadow-lg border border-indigo-500/30 pointer-events-none">
           <div class="flex items-center justify-between gap-1">
@@ -708,6 +736,26 @@
           <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-1.5">
             <div id="ally-exp-bar" class="exp-bar-fill h-full bg-sky-400" style="width: 20%"></div>
           </div>
+        </div>
+
+        <!-- Second Ally HUD for 2v2 Double Battles (Bottom Left) -->
+        <div id="ally-hud-2" class="hidden absolute z-20 bottom-2.5 left-2.5 sm:bottom-4 sm:left-4 w-52 sm:w-64 glass-card rounded-xl p-2 shadow-lg border border-indigo-500/30 pointer-events-none">
+          <div class="flex items-center justify-between gap-1">
+            <div class="flex items-center gap-1 truncate">
+              <span id="ally2-name" class="font-extrabold text-xs text-white truncate">伙伴2</span>
+              <span id="ally2-shiny" class="hidden text-amber-300 text-xs">✨</span>
+            </div>
+            <span id="ally2-lv" class="text-[11px] font-bold text-indigo-300 shrink-0">Lv.50</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-1 my-1">
+            <div id="ally2-types" class="flex gap-1"></div>
+            <span id="ally2-tera-badge" class="hidden px-1.5 py-0.2 rounded bg-fuchsia-500/30 text-fuchsia-100 text-[10px] font-black"></span>
+            <span id="ally2-status" class="hidden px-1.5 py-0.2 rounded text-[10px] font-bold"></span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+            <div id="ally2-hp-bar" class="hp-bar-fill h-full bg-emerald-500" style="width: 100%"></div>
+          </div>
+          <div class="text-[10px] text-slate-300 mt-0.5" id="ally2-hp-text">100%</div>
         </div>
       </div>
 
@@ -867,7 +915,7 @@
       water_gun:     { name: '水枪',     type: 'water',    cat: 'spec', power: 45,  acc: 100, pp: 25, desc: '喷射高压水流' },
       aqua_jet:      { name: '水流喷射', type: 'water',    cat: 'phys', power: 45,  acc: 100, pp: 20, prio: 1, desc: '先制 +1 水流突袭' },
       liquidation:   { name: '水流裂破', type: 'water',    cat: 'phys', power: 85,  acc: 100, pp: 15, foeDrop: { def: -1 }, chance: 25, desc: '25%降低对手1级物防' },
-      surf:          { name: '冲浪',     type: 'water',    cat: 'spec', power: 90,  acc: 100, pp: 15, desc: '掀起巨浪席卷战场' },
+      surf:          { name: '冲浪',     type: 'water',    cat: 'spec', power: 90,  acc: 100, pp: 15, isSpread: true, desc: '掀起巨浪席卷战场' },
       hydro_pump:    { name: '水炮',     type: 'water',    cat: 'spec', power: 115, acc: 82,  pp: 8,  desc: '毁天灭地的超高压水柱' },
       rain_dance:    { name: '求雨',     type: 'water',    cat: 'stat', power: 0,   acc: 100, pp: 5,  weather: 'rain', desc: '5回合大雨：水系威力1.5倍，火系减半' },
 
@@ -882,17 +930,17 @@
       thunder:       { name: '打雷',     type: 'electric', cat: 'spec', power: 115, acc: 75,  pp: 8,  status: 'par', chance: 30, desc: '天雷轰顶(雨天必中)，30%麻痹' },
       thunder_wave:  { name: '电磁波',   type: 'electric', cat: 'stat', power: 0,   acc: 92,  pp: 20, status: 'par', chance: 100, desc: '释放微弱电流使对手麻痹(速度减半)' },
 
-      icy_wind:      { name: '冰冻之风', type: 'ice',      cat: 'spec', power: 60,  acc: 95,  pp: 15, foeDrop: { spe: -1 }, chance: 100, desc: '100%降低对手1级速度' },
+      icy_wind:      { name: '冰冻之风', type: 'ice',      cat: 'spec', power: 60,  acc: 95,  pp: 15, foeDrop: { spe: -1 }, chance: 100, isSpread: true, desc: '100%降低对手1级速度' },
       ice_beam:      { name: '冰冻光束', type: 'ice',      cat: 'spec', power: 90,  acc: 100, pp: 15, status: 'frz', chance: 12, desc: '极寒射线，12%冰冻对手' },
-      blizzard:      { name: '暴风雪',   type: 'ice',      cat: 'spec', power: 115, acc: 75,  pp: 8,  status: 'frz', chance: 20, desc: '凛冬暴雪(雪天必中)，20%冰冻' },
+      blizzard:      { name: '暴风雪',   type: 'ice',      cat: 'spec', power: 115, acc: 75,  pp: 8,  status: 'frz', chance: 20, isSpread: true, desc: '凛冬暴雪(雪天必中)，20%冰冻' },
       snowscape:     { name: '极光雪景', type: 'ice',      cat: 'stat', power: 0,   acc: 100, pp: 5,  weather: 'snow', desc: '5回合降雪：冰系星灵物防提升50%' },
 
       brick_break:   { name: '劈瓦',     type: 'fighting', cat: 'phys', power: 75,  acc: 100, pp: 15, desc: '凌厉手刀劈开防御' },
       close_combat:  { name: '近身战',   type: 'fighting', cat: 'phys', power: 120, acc: 100, pp: 8,  selfBoost: { def: -1, spd: -1 }, desc: '舍身猛攻，自身双防降低1级' },
       aura_sphere:   { name: '波导弹',   type: 'fighting', cat: 'spec', power: 85,  acc: 100, pp: 15, desc: '释放波导能量，必定命中' },
 
-      bulldoze:      { name: '重踏',     type: 'ground',   cat: 'phys', power: 65,  acc: 100, pp: 20, foeDrop: { spe: -1 }, chance: 100, desc: '震踏地面降低对手1级速度' },
-      earthquake:    { name: '地震',     type: 'ground',   cat: 'phys', power: 100, acc: 100, pp: 10, desc: '剧烈撼动大地造成高额物理伤害' },
+      bulldoze:      { name: '重踏',     type: 'ground',   cat: 'phys', power: 65,  acc: 100, pp: 20, foeDrop: { spe: -1 }, chance: 100, isSpread: true, desc: '震踏地面降低对手1级速度' },
+      earthquake:    { name: '地震',     type: 'ground',   cat: 'phys', power: 100, acc: 100, pp: 10, isSpread: true, desc: '剧烈撼动大地造成高额物理伤害' },
       earth_power:   { name: '大地之力', type: 'ground',   cat: 'spec', power: 90,  acc: 100, pp: 12, foeDrop: { spd: -1 }, chance: 20, desc: '地脉喷发，20%降对手特防' },
       sandstorm:     { name: '沙暴',     type: 'ground',   cat: 'stat', power: 0,   acc: 100, pp: 5,  weather: 'sand', desc: '5回合沙暴：每回合损伤非大地/钢属性星灵' },
 
@@ -914,9 +962,16 @@
       flash_cannon:  { name: '加农光炮', type: 'steel',    cat: 'spec', power: 85,  acc: 100, pp: 12, foeDrop: { spd: -1 }, chance: 20, desc: '汇聚金属光泽发射光炮' },
       iron_defense:  { name: '铁壁',     type: 'steel',    cat: 'stat', power: 0,   acc: 100, pp: 15, selfBoost: { def: 2 }, desc: '硬化装甲，大幅提升2级物防' },
 
-      dazzling:      { name: '魔法闪耀', type: 'fairy',    cat: 'spec', power: 80,  acc: 100, pp: 15, desc: '释放耀眼星光重创对手' },
+      dazzling:      { name: '魔法闪耀', type: 'fairy',    cat: 'spec', power: 80,  acc: 100, pp: 15, isSpread: true, desc: '释放耀眼星光重创对手' },
       moonblast:     { name: '月亮之力', type: 'fairy',    cat: 'spec', power: 95,  acc: 100, pp: 12, foeDrop: { spa: -1 }, chance: 30, desc: '借用满月之力攻击，30%降低对手特攻' },
-      play_rough:    { name: '嬉闹',     type: 'fairy',    cat: 'phys', power: 90,  acc: 90,  pp: 12, foeDrop: { atk: -1 }, chance: 20, desc: '妖精乱舞痛击对手' }
+      play_rough:    { name: '嬉闹',     type: 'fairy',    cat: 'phys', power: 90,  acc: 90,  pp: 12, foeDrop: { atk: -1 }, chance: 20, desc: '妖精乱舞痛击对手' },
+      fake_out:      { name: '击掌奇袭', type: 'normal',   cat: 'phys', power: 40,  acc: 100, pp: 10, prio: 3, flinch: 100, firstTurnOnly: true, desc: '先制 +3 登场首回合必定令目标畏缩！' },
+      tailwind:      { name: '顺风',     type: 'normal',   cat: 'stat', power: 0,   acc: 100, pp: 15, fieldEffect: 'tailwind', desc: '4回合内我方全队速度翻倍 (2x)' },
+      trick_room:    { name: '戏法空间', type: 'psychic',  cat: 'stat', power: 0,   acc: 100, pp: 5,  prio: -7, fieldEffect: 'trick_room', desc: '5回合内速度慢的星灵反而先手行动！' },
+      helping_hand:  { name: '帮助',     type: 'normal',   cat: 'stat', power: 0,   acc: 100, pp: 20, prio: 5, fieldEffect: 'helping_hand', desc: '双打神技：先制+5使队友本回合招式威力提升50%' },
+      follow_me:     { name: '看我嘛',   type: 'fairy',    cat: 'stat', power: 0,   acc: 100, pp: 20, prio: 2, fieldEffect: 'follow_me', desc: '双打掩护：吸引敌方所有单体攻击打向自己' },
+      rock_slide:    { name: '岩崩',     type: 'ground',   cat: 'phys', power: 75,  acc: 90,  pp: 10, isSpread: true, flinch: 30, desc: '群攻双方敌人，30%概率令目标畏缩' },
+      stealth_rock:  { name: '隐形岩',   type: 'ground',   cat: 'stat', power: 0,   acc: 100, pp: 20, fieldEffect: 'stealth_rock', desc: '在对手场地撒下隐形岩，换人登场时必定扣血' }
     };
 
     // 27 Unique Species with Procedural Vector Visual Descriptors
@@ -3109,6 +3164,10 @@
       copy.sleepTurns = copy.status === 'slp' ? 2 : 0;
       if (!copy.teraType) copy.teraType = SPECIES_DB[copy.speciesId].types[0];
       copy.isTera = !!mon.preTera;
+      copy.justEntered = true;
+      copy.flinched = false;
+      copy.helpingHand = false;
+      copy.followMe = false;
       return copy;
     }
 
@@ -3449,10 +3508,25 @@
 
     function updateBattleHUD() {
       if (!BTL) return;
+      if (BTL.isDoubles) {
+        BTL.p1.active = BTL.p1.actives[0];
+        BTL.p2.active = BTL.p2.actives[0];
+      }
       const ally = BTL.p1.party[BTL.p1.active];
       const foe  = BTL.p2.party[BTL.p2.active];
       const allySp = SPECIES_DB[ally.speciesId];
       const foeSp  = SPECIES_DB[foe.speciesId];
+
+      const fTag = document.getElementById('btl-field-tag');
+      if (fTag) {
+        const fParts = [];
+        if (BTL.trickRoom > 0) fParts.push(`🌀 戏法空间(${BTL.trickRoom})`);
+        if (BTL.p1.tailwind > 0) fParts.push(`🍃 我方顺风(${BTL.p1.tailwind})`);
+        if (BTL.p2.tailwind > 0) fParts.push(`💨 敌方顺风(${BTL.p2.tailwind})`);
+        if (BTL.p2.stealthRock) fParts.push(`🪨 敌方隐形岩`);
+        fTag.classList.toggle('hidden', fParts.length === 0);
+        fTag.textContent = fParts.join(' · ');
+      }
 
       const weatherLabels = {
         clear: '☀️ 晴朗无风',
@@ -3537,6 +3611,52 @@
         document.getElementById('ally-exp-bar').style.width = '100%';
       }
 
+      const f2Card = document.getElementById('foe-hud-2');
+      const a2Card = document.getElementById('ally-hud-2');
+      if (BTL.isDoubles) {
+        const foe2 = BTL.p2.party[BTL.p2.actives[1]];
+        const ally2 = BTL.p1.party[BTL.p1.actives[1]];
+        if (f2Card && foe2) {
+          f2Card.classList.remove('hidden');
+          const f2Sp = SPECIES_DB[foe2.speciesId];
+          document.getElementById('foe2-name').textContent = foe2.nickname;
+          document.getElementById('foe2-lv').textContent = `Lv.${foe2.level}`;
+          document.getElementById('foe2-shiny').classList.toggle('hidden', !foe2.shiny);
+          document.getElementById('foe2-types').innerHTML = renderTypeBadgesHtml(foe2.isTera ? [foe2.teraType] : f2Sp.types);
+          const f2Tera = document.getElementById('foe2-tera-badge');
+          f2Tera.classList.toggle('hidden', !foe2.isTera);
+          if (foe2.isTera) f2Tera.textContent = `💎 ${TYPES[foe2.teraType].name}`;
+          renderStatusBadge(document.getElementById('foe2-status'), foe2.status);
+          const pct = Math.max(0, Math.min(100, (foe2.currentHp / foe2.maxHp) * 100));
+          const b = document.getElementById('foe2-hp-bar');
+          b.style.width = `${pct}%`;
+          b.className = `hp-bar-fill h-full ${pct > 50 ? 'bg-emerald-500' : pct > 22 ? 'bg-amber-400' : 'bg-rose-500'}`;
+          document.getElementById('foe2-hp-text').textContent = `${foe2.currentHp} / ${foe2.maxHp} (${Math.ceil(pct)}%)`;
+        }
+        if (a2Card && ally2) {
+          a2Card.classList.remove('hidden');
+          const a2Sp = SPECIES_DB[ally2.speciesId];
+          document.getElementById('ally2-name').textContent = ally2.nickname;
+          document.getElementById('ally2-lv').textContent = `Lv.${ally2.level}`;
+          document.getElementById('ally2-shiny').classList.toggle('hidden', !ally2.shiny);
+          document.getElementById('ally2-types').innerHTML = renderTypeBadgesHtml(ally2.isTera ? [ally2.teraType] : a2Sp.types);
+          const a2Tera = document.getElementById('ally2-tera-badge');
+          a2Tera.classList.toggle('hidden', !ally2.isTera);
+          if (ally2.isTera) a2Tera.textContent = `💎 ${TYPES[ally2.teraType].name}`;
+          renderStatusBadge(document.getElementById('ally2-status'), ally2.status);
+          const pct = Math.max(0, Math.min(100, (ally2.currentHp / ally2.maxHp) * 100));
+          const b = document.getElementById('ally2-hp-bar');
+          b.style.width = `${pct}%`;
+          b.className = `hp-bar-fill h-full ${pct > 50 ? 'bg-emerald-500' : pct > 22 ? 'bg-amber-400' : 'bg-rose-500'}`;
+          document.getElementById('ally2-hp-text').textContent = `${ally2.currentHp} / ${ally2.maxHp}`;
+          a2Card.style.borderColor = (BTL.pickSlot === 1 && !BTL.busy) ? '#818cf8' : '';
+          document.getElementById('ally-hud').style.borderColor = (BTL.pickSlot === 0 && !BTL.busy) ? '#818cf8' : '';
+        }
+      } else {
+        if (f2Card) f2Card.classList.add('hidden');
+        if (a2Card) a2Card.classList.add('hidden');
+      }
+
       renderBattleControls();
     }
 
@@ -3617,16 +3737,34 @@
 
       const side = getActiveControllerParty();
       const oppSide = getOpponentOfController();
-      const activeMon = side.party[side.active];
-      const oppMon = oppSide.party[oppSide.active];
+      const slotIdx = BTL.isDoubles ? (BTL.pickSlot || 0) : 0;
+      const activeMonIdx = BTL.isDoubles ? side.actives[slotIdx] : side.active;
+      const activeMon = side.party[activeMonIdx];
+      const defOppSlot = (oppSide.party[oppSide.actives ? oppSide.actives[0] : oppSide.active].currentHp > 0) ? 0 : 1;
+      const oppTargetIdx = BTL.isDoubles ? oppSide.actives[BTL.selectedTargetSlot !== undefined ? BTL.selectedTargetSlot : defOppSlot] : oppSide.active;
+      const oppMon = oppSide.party[oppTargetIdx] || oppSide.party[oppSide.active];
       const oppSp = SPECIES_DB[oppMon.speciesId];
 
       if (BTL.panel === 'moves') {
         movesDiv.classList.remove('hidden');
         subDiv.classList.add('hidden');
-        const whoBanner = (BTL.mode === 'hotseat')
-          ? `<div class="col-span-2 text-[11px] font-bold text-pink-300">🎮 当前下达指令：${BTL.hotseatPhase === 'p2_pick' ? '2P 挑战方 (' + activeMon.nickname + ')' : '1P 主战方 (' + activeMon.nickname + ')'}</div>`
-          : '';
+        let targetBar = '';
+        if (BTL.isDoubles) {
+          const fL = oppSide.party[oppSide.actives[0]];
+          const fR = oppSide.party[oppSide.actives[1]];
+          const curT = BTL.selectedTargetSlot !== undefined ? BTL.selectedTargetSlot : defOppSlot;
+          targetBar = `<div class="col-span-2 flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-slate-800/80">
+            <span class="text-[11px] font-extrabold text-indigo-300">⚔️ ${BTL.mode === 'hotseat' ? (BTL.hotseatPhase === 'p2_pick' ? '2P ' : '1P ') : ''}${slotIdx === 0 ? '【左位】' : '【右位】'}${activeMon.nickname} 出招 ${slotIdx === 1 ? '<button type="button" onclick="undoDoublesSlot0()" class="ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">↩ 重选左位</button>' : ''}</span>
+            <div class="flex items-center gap-1 text-[10px]">
+              <span class="text-slate-400">瞄准:</span>
+              <button type="button" ${fL.currentHp <= 0 ? 'disabled' : ''} onclick="setDoublesTarget(0)" class="px-2 py-0.5 rounded-lg border font-bold ${curT === 0 ? 'bg-rose-600 border-rose-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-300'} ${fL.currentHp <= 0 ? 'opacity-40' : ''}">🎯 左·${fL.nickname}</button>
+              <button type="button" ${fR.currentHp <= 0 ? 'disabled' : ''} onclick="setDoublesTarget(1)" class="px-2 py-0.5 rounded-lg border font-bold ${curT === 1 ? 'bg-rose-600 border-rose-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-300'} ${fR.currentHp <= 0 ? 'opacity-40' : ''}">🎯 右·${fR.nickname}</button>
+            </div>
+          </div>`;
+        } else if (BTL.mode === 'hotseat') {
+          targetBar = `<div class="col-span-2 text-[11px] font-bold text-pink-300">🎮 当前下达指令：${BTL.hotseatPhase === 'p2_pick' ? '2P 挑战方 (' + activeMon.nickname + ')' : '1P 主战方 (' + activeMon.nickname + ')'}</div>`;
+        }
+        const whoBanner = targetBar;
         movesDiv.innerHTML = whoBanner + activeMon.moves.map((mvSlot, idx) => {
           const mv = MOVES_DB[mvSlot.id];
           const tInfo = TYPES[mv.type] || TYPES.normal;
@@ -3684,7 +3822,7 @@
         subDiv.classList.remove('hidden');
         subDiv.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
           ${side.party.map((m, idx) => {
-            const isOut = idx === side.active;
+            const isOut = BTL.isDoubles ? side.actives.includes(idx) : (idx === side.active);
             const dead = m.currentHp <= 0;
             return `<button type="button" ${BTL.busy || isOut || dead ? 'disabled' : ''} onclick="chooseBattleAction({type:'switch', target:${idx}})" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border ${isOut ? 'border-indigo-500' : 'border-slate-700'} text-left ${isOut || dead ? 'opacity-45' : ''}">
               <div class="font-bold text-xs text-white truncate">${m.shiny ? '✨ ' : ''}${m.nickname} Lv.${m.level}</div>
@@ -3824,6 +3962,51 @@
         return;
       }
 
+      // 2v2 Double Battle Command Collector
+      if (BTL.isDoubles) {
+        const side = getActiveControllerParty();
+        const oppSide = getOpponentOfController();
+        const defT = (oppSide.party[oppSide.actives[0]].currentHp > 0) ? 0 : 1;
+        action.targetSlot = BTL.selectedTargetSlot !== undefined ? BTL.selectedTargetSlot : defT;
+        action.slot = BTL.pickSlot;
+        BTL.pendingActs[BTL.pickSlot] = action;
+
+        const s1Alive = side.party[side.actives[1]] && side.party[side.actives[1]].currentHp > 0;
+        if (BTL.pickSlot === 0 && s1Alive) {
+          BTL.pickSlot = 1;
+          updateBattleHUD();
+          return;
+        }
+        const myActs = BTL.pendingActs.slice();
+        BTL.pendingActs = [null, null];
+        BTL.pickSlot = 0;
+
+        if (BTL.mode === 'hotseat') {
+          if (BTL.hotseatPhase === 'p1_pick') {
+            BTL.p1DoublesPending = myActs;
+            BTL.hotseatPhase = 'p2_pick';
+            BTL.hotseatCurtain = true;
+            updateBattleHUD();
+            return;
+          } else {
+            const p1A = BTL.p1DoublesPending;
+            BTL.p1DoublesPending = null;
+            BTL.hotseatPhase = 'p1_pick';
+            await executeDoublesTurn(p1A, myActs, Math.floor(Math.random() * 1e9));
+            return;
+          }
+        }
+        const aiActs = [0, 1].map(sIdx => {
+          const m = BTL.p2.party[BTL.p2.actives[sIdx]];
+          if (!m || m.currentHp <= 0) return null;
+          const a = pickAIActionForSlot(BTL.p2, sIdx, BTL.p1);
+          a.slot = sIdx;
+          return a;
+        });
+        await executeDoublesTurn(myActs, aiActs, Math.floor(Math.random() * 1e9));
+        return;
+      }
+
       // Single-player vs Wild / Gym / Ranked / Ghost Team
       const aiDiff = BTL.mode === 'wild' ? 1 : 2;
       const aiAct = pickAIAction(BTL.p2, BTL.p1, aiDiff);
@@ -3831,6 +4014,272 @@
         aiAct.terastal = true;
       }
       await executeSimultaneousTurn(action, aiAct, Math.floor(Math.random() * 1e9));
+    }
+
+    function setDoublesTarget(slotIdx) {
+      if (!BTL) return;
+      AudioFX.click();
+      BTL.selectedTargetSlot = slotIdx;
+      renderBattleControls();
+    }
+
+    function undoDoublesSlot0() {
+      if (!BTL || !BTL.isDoubles) return;
+      AudioFX.click();
+      BTL.pickSlot = 0;
+      BTL.pendingActs[0] = null;
+      updateBattleHUD();
+    }
+
+    function pickAIActionForSlot(aiSide, slotIdx, humanSide) {
+      const me = aiSide.party[aiSide.actives[slotIdx]];
+      const aliveHumanSlots = [0, 1].filter(s => humanSide.party[humanSide.actives[s]] && humanSide.party[humanSide.actives[s]].currentHp > 0);
+      const tSlot = aliveHumanSlots.length ? aliveHumanSlots[Math.floor(Math.random() * aliveHumanSlots.length)] : 0;
+      const foe = humanSide.party[humanSide.actives[tSlot]];
+      const foeSp = SPECIES_DB[foe.speciesId];
+
+      let bestIdx = 0, bestScore = -999;
+      me.moves.forEach((ms, idx) => {
+        if (ms.pp <= 0) return;
+        const mv = MOVES_DB[ms.id];
+        let score = 40 + Math.random() * 15;
+        if (mv.cat === 'stat') {
+          if (mv.fieldEffect === 'tailwind' && aiSide.tailwind <= 0) score = 115;
+          else if (mv.fieldEffect === 'helping_hand' && slotIdx === 0) score = 95;
+          else if (mv.healPct && me.currentHp < me.maxHp * 0.5) score = 130;
+          else score = 20;
+        } else {
+          const mult = getTypeMultiplier(mv.type, foe.isTera ? [foe.teraType] : foeSp.types, foe.ability);
+          score = (mv.power || 50) * mult * (mv.isSpread ? 1.25 : 1.0);
+        }
+        if (score > bestScore) { bestScore = score; bestIdx = idx; }
+      });
+      return { type: 'move', index: bestIdx, targetSlot: tSlot };
+    }
+
+    async function executeDoublesTurn(p1Acts, p2Acts, seed) {
+      if (!BTL || BTL.ended) return;
+      BTL.busy = true;
+      updateBattleHUD();
+      const rng = createSeededRng(seed);
+
+      [...BTL.p1.party, ...BTL.p2.party].forEach(m => {
+        m.protected = false;
+        m.flinched = false;
+        m.helpingHand = false;
+        m.followMe = false;
+      });
+
+      const entries = [];
+      [0, 1].forEach(s => {
+        const a1 = p1Acts[s];
+        const m1 = BTL.p1.party[BTL.p1.actives[s]];
+        if (a1 && m1 && m1.currentHp > 0) entries.push({ key: 'p1', slot: s, side: BTL.p1, opp: BTL.p2, act: a1, mon: m1 });
+        const a2 = p2Acts[s];
+        const m2 = BTL.p2.party[BTL.p2.actives[s]];
+        if (a2 && m2 && m2.currentHp > 0) entries.push({ key: 'p2', slot: s, side: BTL.p2, opp: BTL.p1, act: a2, mon: m2 });
+      });
+
+      for (const e of entries) {
+        if (e.act.terastal && !e.side.teraUsed) {
+          e.side.teraUsed = true;
+          e.mon.isTera = true;
+          AudioFX.terastalCutscene();
+          AudioFX.syncContextBGM();
+          if (typeof GL3D !== 'undefined' && GL3D.triggerTerastalCutscene3D) {
+            GL3D.triggerTerastalCutscene3D(e.key === 'p1', e.mon.teraType, e.slot);
+          }
+          appendBattleLog(`💎 <strong>${e.mon.nickname}</strong> 太晶化为了【${TYPES[e.mon.teraType].name}属性】！`, 'text-fuchsia-300 font-bold');
+          updateBattleHUD();
+          await waitMs(1050);
+        }
+      }
+
+      const effSpd = (e) => {
+        let sp = effectiveSpeed(e.mon);
+        if (e.side.tailwind > 0) sp *= 2;
+        return sp;
+      };
+      entries.sort((a, b) => {
+        const pa = actionPriority(a.side, a.act, a.mon);
+        const pb = actionPriority(b.side, b.act, b.mon);
+        if (pa !== pb) return pb - pa;
+        const sa = effSpd(a), sb = effSpd(b);
+        if (sa !== sb) return BTL.trickRoom > 0 ? (sa - sb) : (sb - sa);
+        return rng() < 0.5 ? -1 : 1;
+      });
+
+      for (const e of entries) {
+        if (!BTL || BTL.ended) break;
+        if (e.mon.currentHp <= 0 || e.mon.flinched) {
+          if (e.mon.flinched && e.mon.currentHp > 0) {
+            appendBattleLog(`😵 <strong>${e.mon.nickname}</strong> 畏缩了，无法出招！`, 'text-amber-300');
+            await waitMs(320);
+          }
+          continue;
+        }
+        await performDoublesAction(e, rng);
+        updateBattleHUD();
+        if (checkBattleEndState()) {
+          BTL.busy = false;
+          return;
+        }
+      }
+
+      if (BTL.trickRoom > 0) { BTL.trickRoom--; if (BTL.trickRoom === 0) appendBattleLog('🌀 扭曲的戏法空间恢复了正常！', 'text-slate-400'); }
+      if (BTL.p1.tailwind > 0) BTL.p1.tailwind--;
+      if (BTL.p2.tailwind > 0) BTL.p2.tailwind--;
+      [BTL.p1, BTL.p2].forEach(sd => sd.actives.forEach(idx => { if (sd.party[idx]) sd.party[idx].justEntered = false; }));
+
+      for (const [sKey, sObj] of [['p1', BTL.p1], ['p2', BTL.p2]]) {
+        for (let s = 0; s < 2; s++) {
+          const m = sObj.party[sObj.actives[s]];
+          if (m && m.currentHp <= 0) {
+            const benchIdx = sObj.party.findIndex((cand, idx) => cand.currentHp > 0 && !sObj.actives.includes(idx));
+            if (benchIdx >= 0) {
+              sObj.actives[s] = benchIdx;
+              const nm = sObj.party[benchIdx];
+              nm.justEntered = true;
+              appendBattleLog(`🔄 ${sKey === 'p1' ? '我方' : '对手'}派出 <strong>${nm.nickname}</strong> 补位！`, sKey === 'p1' ? 'text-indigo-300' : 'text-rose-300');
+              if (sObj.stealthRock) {
+                const rockDmg = Math.max(1, Math.floor(nm.maxHp / 8));
+                nm.currentHp = Math.max(0, nm.currentHp - rockDmg);
+                appendBattleLog(`🪨 隐形岩扎伤了登场的 ${nm.nickname} (-${rockDmg} HP)！`, 'text-amber-300');
+              }
+            }
+          }
+        }
+      }
+
+      BTL.turn++;
+      BTL.busy = false;
+      updateBattleHUD();
+    }
+
+    async function performDoublesAction(e, rng) {
+      const { key, slot, side, opp, act, mon } = e;
+      const isAlly = key === 'p1';
+
+      if (act.type === 'switch') {
+        if (!side.actives.includes(act.target)) {
+          side.actives[slot] = act.target;
+          const nm = side.party[act.target];
+          nm.justEntered = true;
+          appendBattleLog(`🔄 ${isAlly ? '我方' : '对手'}换上了 <strong>${nm.nickname}</strong>！`, isAlly ? 'text-indigo-300' : 'text-rose-300');
+          if (side.stealthRock) {
+            const rockDmg = Math.max(1, Math.floor(nm.maxHp / 8));
+            nm.currentHp = Math.max(0, nm.currentHp - rockDmg);
+            appendBattleLog(`🪨 隐形岩扎伤了 ${nm.nickname} (-${rockDmg} HP)！`, 'text-amber-300');
+          }
+        }
+        await waitMs(380);
+        return;
+      }
+
+      const ms = mon.moves[act.index] || mon.moves[0];
+      const mv = MOVES_DB[ms.id];
+      if (mv.firstTurnOnly && !mon.justEntered) {
+        appendBattleLog(`💨 ${mon.nickname} 的【${mv.name}】只能在登场首回合使用！`, 'text-slate-400');
+        await waitMs(320);
+        return;
+      }
+
+      ms.pp = Math.max(0, ms.pp - 1);
+      AudioFX.playMoveSFX(mv.type, mv.cat);
+      appendBattleLog(`${isAlly ? '▶' : '◀'} <strong>${mon.nickname}</strong> 使出了 【${mv.name}】！`, isAlly ? 'text-indigo-200' : 'text-rose-200');
+
+      if (mv.effect === 'protect') {
+        mon.protected = true;
+        AudioFX.boost(true);
+        appendBattleLog(`🛡️ ${mon.nickname} 守住了自己！`, 'text-sky-300');
+        await waitMs(320);
+        return;
+      }
+
+      if (mv.fieldEffect) {
+        if (mv.fieldEffect === 'tailwind') {
+          side.tailwind = 4;
+          appendBattleLog(`🍃 ${isAlly ? '我方' : '对手'}刮起了顺风，全队速度翻倍！`, 'text-emerald-300');
+        } else if (mv.fieldEffect === 'trick_room') {
+          BTL.trickRoom = BTL.trickRoom > 0 ? 0 : 5;
+          appendBattleLog(BTL.trickRoom > 0 ? '🌀 展开了戏法空间！速度慢的星灵将率先行动！' : '🌀 戏法空间被解除了！', 'text-fuchsia-300');
+        } else if (mv.fieldEffect === 'helping_hand') {
+          const partner = side.party[side.actives[1 - slot]];
+          if (partner && partner.currentHp > 0) {
+            partner.helpingHand = true;
+            appendBattleLog(`🤝 ${mon.nickname} 帮助了队友 ${partner.nickname}，招式威力提升50%！`, 'text-amber-300');
+          }
+        } else if (mv.fieldEffect === 'follow_me') {
+          mon.followMe = true;
+          appendBattleLog(`✨ ${mon.nickname} 成为全场焦点，吸引所有单体攻击！`, 'text-pink-300');
+        } else if (mv.fieldEffect === 'stealth_rock') {
+          opp.stealthRock = true;
+          appendBattleLog(`🪨 尖锐的隐形岩漂浮在了对手场地四周！`, 'text-amber-300');
+        }
+        AudioFX.boost(true);
+        await waitMs(380);
+        return;
+      }
+
+      if (mv.cat === 'stat' && mv.selfBoost) {
+        for (const [k, d] of Object.entries(mv.selfBoost)) mon.stages[k] = Math.max(-6, Math.min(6, mon.stages[k] + d));
+        AudioFX.boost(true);
+        appendBattleLog(`⬆️ ${mon.nickname} 的能力提升了！`, 'text-emerald-300');
+        await waitMs(320);
+        return;
+      }
+
+      let targetSlots = [];
+      if (mv.isSpread) {
+        targetSlots = [0, 1].filter(s => opp.party[opp.actives[s]] && opp.party[opp.actives[s]].currentHp > 0);
+      } else {
+        const redirectSlot = [0, 1].find(s => opp.party[opp.actives[s]] && opp.party[opp.actives[s]].currentHp > 0 && opp.party[opp.actives[s]].followMe);
+        let chosen = redirectSlot !== undefined ? redirectSlot : (act.targetSlot !== undefined ? act.targetSlot : 0);
+        if (!opp.party[opp.actives[chosen]] || opp.party[opp.actives[chosen]].currentHp <= 0) {
+          chosen = [0, 1].find(s => opp.party[opp.actives[s]] && opp.party[opp.actives[s]].currentHp > 0) || 0;
+        }
+        targetSlots = [chosen];
+      }
+
+      if (typeof GL3D !== 'undefined' && GL3D.triggerBattleAttack3D) {
+        GL3D.triggerBattleAttack3D(isAlly, mv.type, mv.cat, slot, targetSlots[0]);
+      }
+
+      const spreadMult = (mv.isSpread && targetSlots.length > 1) ? 0.75 : 1.0;
+      const origActorTypes = SPECIES_DB[mon.speciesId].types;
+      const hhMult = mon.helpingHand ? 1.5 : 1.0;
+
+      for (const tSlot of targetSlots) {
+        const target = opp.party[opp.actives[tSlot]];
+        if (!target || target.currentHp <= 0) continue;
+        if (target.protected) {
+          appendBattleLog(`🛡️ ${target.nickname} 守住了攻击！`, 'text-sky-300');
+          continue;
+        }
+        const targetTypes = target.isTera ? [target.teraType] : SPECIES_DB[target.speciesId].types;
+        const typeMult = getTypeMultiplier(mv.type, targetTypes, target.ability);
+        if (typeMult === 0) {
+          appendBattleLog(`🚫 对 ${target.nickname} 没有效果！`, 'text-slate-400');
+          continue;
+        }
+
+        const atkStat = mv.cat === 'phys' ? mon.battleStats.atk * stageMultiplier(mon.stages.atk) : mon.battleStats.spa * stageMultiplier(mon.stages.spa);
+        const defStat = mv.cat === 'phys' ? target.battleStats.def * stageMultiplier(target.stages.def) : target.battleStats.spd * stageMultiplier(target.stages.spd);
+        let dmg = Math.floor((((2 * mon.level / 5 + 2) * (mv.power || 50) * (atkStat / Math.max(1, defStat))) / 50) + 2);
+        if (mon.isTera ? (mv.type === mon.teraType) : origActorTypes.includes(mv.type)) dmg *= 1.5;
+        dmg = Math.max(1, Math.floor(dmg * typeMult * spreadMult * hhMult * (0.88 + rng() * 0.12)));
+
+        target.currentHp = Math.max(0, target.currentHp - dmg);
+        AudioFX.hit(typeMult);
+        appendBattleLog(`💥 命中 <strong>${target.nickname}</strong>，造成 <strong>${dmg}</strong> 点伤害！${typeMult >= 2 ? '(效果绝佳)' : ''}`, typeMult >= 2 ? 'text-amber-300' : 'text-slate-200');
+        if (mv.flinch && target.currentHp > 0 && rng() * 100 < mv.flinch) {
+          target.flinched = true;
+        }
+        if (target.currentHp <= 0) {
+          appendBattleLog(`💫 <strong>${target.nickname}</strong> 倒下了！`, 'text-rose-400 font-bold');
+        }
+      }
+      await waitMs(650);
     }
 
     async function tryResolveMultiplayerTurn() {
@@ -3855,10 +4304,10 @@
       }
     }
 
-    function actionPriority(sideObj, act) {
+    function actionPriority(sideObj, act, explicitMon = null) {
       if (act.type === 'switch' || act.type === 'item') return 6;
       if (act.type === 'struggle') return 0;
-      const mon = sideObj.party[sideObj.active];
+      const mon = explicitMon || sideObj.party[sideObj.active];
       const slot = mon.moves[act.index] || mon.moves[0];
       const mv = MOVES_DB[slot.id];
       return mv.prio || 0;
@@ -4632,10 +5081,17 @@
         hotseatPhase: 'p1_pick',
         hotseatCurtain: false,
         p1Pending: null,
+        isDoubles: !!config.isDoubles && p1Team.length >= 2 && p2Team.length >= 2,
         teraArmed: false,
         owContext: config.owContext || null,
-        p1: { name: config.p1Name || '我方', party: p1Team, active: p1First, teraUsed: false },
-        p2: { name: config.p2Name || '对手', party: p2Team, active: p2First, teraUsed: p2Team.some(m => m.isTera) }
+        trickRoom: 0,
+        pickSlot: 0,
+        pendingActs: [null, null],
+        p2PendingActs: [null, null],
+        forceSwitchQueue: [],
+        camOverride: 'auto',
+        p1: { name: config.p1Name || '我方', party: p1Team, active: p1First, actives: [p1First, Math.min(p1Team.length - 1, p1First + 1)], teraUsed: false, tailwind: 0, stealthRock: false },
+        p2: { name: config.p2Name || '对手', party: p2Team, active: p2First, actives: [p2First, Math.min(p2Team.length - 1, p2First + 1)], teraUsed: p2Team.some(m => m.isTera), tailwind: 0, stealthRock: false }
       };
 
       // Mark opponent species seen in Dex
@@ -4720,9 +5176,10 @@
     }
 
     function parseRuleConfig(ruleStr) {
-      if (ruleStr === 'flat50_3v3') return { flatLv: 50, maxParty: 3, label: '公平 Lv.50 3v3' };
-      if (ruleStr === 'flat50_6v6') return { flatLv: 50, maxParty: 6, label: '公平 Lv.50 6v6' };
-      return { flatLv: null, maxParty: 6, label: '无限制自由全队' };
+      if (ruleStr === 'doubles_vgc') return { flatLv: 50, maxParty: 4, isDoubles: true, label: 'VGC 2v2 双打 4v4' };
+      if (ruleStr === 'flat50_3v3') return { flatLv: 50, maxParty: 3, isDoubles: false, label: '公平 Lv.50 3v3' };
+      if (ruleStr === 'flat50_6v6') return { flatLv: 50, maxParty: 6, isDoubles: false, label: '公平 Lv.50 6v6' };
+      return { flatLv: null, maxParty: 6, isDoubles: false, label: '无限制自由全队' };
     }
 
     function hostBroadcastRoom() {
@@ -5162,8 +5619,13 @@
         ? JSON.parse(JSON.stringify(currentUser.party))
         : buildPresetTeam(p2Mode);
 
+      if (rc.isDoubles && currentUser.party.length < 2) {
+        showToast('2v2 双打模式至少需要随身携带 2 只星灵！先去捕捉一只或从电脑取出吧。', 'warn');
+        return;
+      }
       launchBattle({
         mode: 'hotseat',
+        isDoubles: !!rc.isDoubles,
         title: `双人同屏对决 (${rc.label})`,
         bg: 'cosmos',
         flatLv: 50,
@@ -5175,39 +5637,38 @@
       });
     }
 
-    function startRankedMatchmaking() {
+    function startRankedMatchmaking(isDoubles = false) {
       if (!currentUser) return;
-      AudioFX.click();
-      const btn = document.getElementById('btn-find-ranked');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '🔍 正在搜索同段位训练家...';
+      if (isDoubles && currentUser.party.length < 2) {
+        showToast('2v2 双打排位至少需要队伍中有 2 只星灵！先去开放世界收服第2只伙伴吧！', 'warn');
+        return;
       }
+      AudioFX.click();
+      const btn = document.getElementById(isDoubles ? 'btn-find-doubles-vgc' : 'btn-find-ranked');
+      if (btn) btn.disabled = true;
       setTimeout(() => {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '⚔️ 匹配排位对手 (Lv.50 3v3)';
-        }
-        const rivalNames = ['苍炎剑士·零', '深海歌姬·澪', '雷霆战术家·雷恩', '星辉大师·露娜', '龙脉传人·御龙渡', '极光魔女·艾莉丝'];
+        if (btn) btn.disabled = false;
+        const rivalNames = ['帕底亚冠军·妮莫', '双打大师·奇巴纳', '星辉双子·露娜', '龙脉传人·御龙渡', '极光魔女·艾莉丝'];
         const rival = rivalNames[Math.floor(Math.random() * rivalNames.length)];
         const rivalElo = Math.max(850, (currentUser.elo || 1000) + Math.floor((Math.random() - 0.45) * 90));
         const poolKeys = ['preset_balanced', 'preset_dragon', 'preset_fable'];
         const pool = buildPresetTeam(poolKeys[Math.floor(Math.random() * poolKeys.length)]);
-        // Shuffle 3 competitive picks
-        const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+        const pickCnt = isDoubles ? 4 : 3;
+        const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, pickCnt);
 
         launchBattle({
           mode: 'ranked',
-          title: `排位赛 vs ${rival} (${rivalElo}分)`,
+          isDoubles: !!isDoubles,
+          title: `${isDoubles ? 'VGC 2v2 双打排位' : '单打排位赛'} vs ${rival} (${rivalElo}分)`,
           bg: 'cosmos',
           flatLv: 50,
-          maxParty: 3,
+          maxParty: pickCnt,
           p1Name: currentUser.nickname,
           p2Name: rival,
           p1Team: currentUser.party,
           p2Team: shuffled
         });
-      }, 650);
+      }, 550);
     }
 
     // =========================================================================
@@ -5990,7 +6451,16 @@
 
           <!-- Move Relearner / Loadout -->
           <div class="p-2.5 rounded-xl bg-slate-900/75 border border-slate-800 space-y-1.5">
-            <div class="text-xs font-bold text-emerald-300">📘 技能配招池（点击切换出战4招，已装备 ${mon.moves.length}/4）</div>
+            <div class="flex flex-wrap items-center justify-between gap-1">
+              <span class="text-xs font-bold text-emerald-300">📘 技能配招池（点击切换出战4招，已装备 ${mon.moves.length}/4）</span>
+              <span class="text-[10px] text-amber-300">💿 可免费学习 VGC 双打招式机：</span>
+            </div>
+            <div class="flex flex-wrap gap-1 pb-1">
+              ${['fake_out', 'tailwind', 'trick_room', 'helping_hand', 'follow_me', 'rock_slide', 'stealth_rock', 'protect'].map(tmId => {
+                const known = mon.learnedMoves.includes(tmId);
+                return known ? '' : `<button type="button" onclick="teachTmMove('${mon.uid}', '${tmId}', ${fromPc})" class="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/40 text-amber-200 text-[10px] font-bold">+ 💿 ${MOVES_DB[tmId].name}</button>`;
+              }).join('')}
+            </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               ${mon.learnedMoves.map(mId => {
                 const mv = MOVES_DB[mId];
@@ -6007,6 +6477,21 @@
           </div>
         </div>`
       );
+    }
+
+    function teachTmMove(uid, moveId, fromPc) {
+      const list = fromPc ? currentUser.pc : currentUser.party;
+      const mon = list.find(m => m.uid === uid);
+      if (!mon || !MOVES_DB[moveId]) return;
+      AudioFX.boost(true);
+      if (!mon.learnedMoves.includes(moveId)) mon.learnedMoves.push(moveId);
+      if (mon.moves.length < 4 && !mon.moves.some(x => x.id === moveId)) {
+        mon.moves.push({ id: moveId, pp: MOVES_DB[moveId].pp, maxPp: MOVES_DB[moveId].pp });
+      }
+      persistAccounts(false);
+      renderAllMainViews();
+      openMonsterDetailModal(uid, fromPc);
+      showToast(`💿 ${mon.nickname} 学会了【${MOVES_DB[moveId].name}】！`, 'success');
     }
 
     function toggleMoveEquip(uid, moveId, fromPc) {
@@ -7756,13 +8241,9 @@
       btlArenaGroup: null,
       btlBuiltBg: null,
       btlAllyMesh: null,
+      btlAllyMesh2: null,
       btlFoeMesh: null,
-      btlAllyShadow: null,
-      btlFoeShadow: null,
-      btlAllyCrown: null,
-      btlFoeCrown: null,
-      btlAllyShield: null,
-      btlFoeShield: null,
+      btlFoeMesh2: null,
       btlBallGroup: null,
       btlVfxList: [],
       btlWeatherPts: null,
@@ -8700,9 +9181,13 @@
             return grp;
           };
 
-          this.btlAllyMesh = makeCombatantNode(2.75);
-          this.btlFoeMesh  = makeCombatantNode(2.55);
-          this.btlScene.add(this.btlAllyMesh, this.btlFoeMesh);
+          this.btlAllyMesh  = makeCombatantNode(2.75);
+          this.btlAllyMesh2 = makeCombatantNode(2.55);
+          this.btlFoeMesh   = makeCombatantNode(2.55);
+          this.btlFoeMesh2  = makeCombatantNode(2.45);
+          this.btlAllyMesh2.visible = false;
+          this.btlFoeMesh2.visible  = false;
+          this.btlScene.add(this.btlAllyMesh, this.btlAllyMesh2, this.btlFoeMesh, this.btlFoeMesh2);
 
           // 3D Spherical Pokeball Mesh
           const ballGrp = new THREE.Group();
@@ -8850,13 +9335,23 @@
         }
       },
 
-      triggerBattleAttack3D(isAlly, moveType, cat) {
+      getSlot3DCoords(isAlly, slot = 0) {
+        if (!BTL || !BTL.isDoubles) {
+          return isAlly ? [-3.0, 2.0] : [3.0, -2.0];
+        }
+        if (isAlly) return slot === 0 ? [-3.7, 1.8] : [-1.2, 3.2];
+        return slot === 0 ? [1.2, -3.2] : [3.7, -1.8];
+      },
+
+      triggerBattleAttack3D(isAlly, moveType, cat, atkSlot = 0, defSlot = 0) {
         if (!this.btlReady && !this.initBattle3D()) return;
         const colorHex = parseInt(((TYPES[moveType] || TYPES.normal).color).replace('#', '0x'), 16);
-        const start = isAlly ? new THREE.Vector3(-2.6, 1.3, 1.7) : new THREE.Vector3(2.6, 1.3, -1.7);
-        const end   = isAlly ? new THREE.Vector3(3.0, 1.2, -2.0) : new THREE.Vector3(-3.0, 1.2, 2.0);
+        const [sx, sz] = this.getSlot3DCoords(isAlly, atkSlot);
+        const [ex, ez] = this.getSlot3DCoords(!isAlly, defSlot);
+        const start = new THREE.Vector3(sx, 1.3, sz);
+        const end   = new THREE.Vector3(ex, 1.2, ez);
 
-        this.btlCamFocus = { until: performance.now() + 580, isAlly };
+        this.btlCamFocus = { start: performance.now(), until: performance.now() + 920, isAlly, atkPos: start.clone(), defPos: end.clone() };
 
         if (cat === 'stat') {
           // Rising 3D Aura Torus Rings around caster
@@ -8964,6 +9459,23 @@
           this.btlAllyMesh.visible = false;
         }
 
+        // Update Second Ally 3D Node in 2v2 Doubles
+        if (BTL.isDoubles && BTL.p1.party[BTL.p1.actives[1]] && BTL.p1.party[BTL.p1.actives[1]].currentHp > 0) {
+          const ally2 = BTL.p1.party[BTL.p1.actives[1]];
+          this.btlAllyMesh2.visible = true;
+          const ud2 = this.btlAllyMesh2.userData;
+          const tex2 = this.getMonsterTexture(ally2.speciesId, ally2.shiny);
+          if (tex2 && ud2.spr.material.map !== tex2) { ud2.spr.material.map = tex2; ud2.spr.material.needsUpdate = true; }
+          const [ax1, az1] = this.getSlot3DCoords(true, 0);
+          const [ax2, az2] = this.getSlot3DCoords(true, 1);
+          this.btlAllyMesh.position.set(ax1, 0, az1);
+          this.btlAllyMesh2.position.set(ax2, 0, az2);
+          ud2.crownGrp.visible = !!ally2.isTera;
+          ud2.shield.visible = !!ally2.protected;
+        } else {
+          this.btlAllyMesh2.visible = false;
+        }
+
         // Update Foe 3D Node
         const hideFoeInBall = BtlFX.ballAnim && BtlFX.ballAnim.progress >= 0.45;
         if (foe && foe.currentHp > 0 && !hideFoeInBall) {
@@ -8999,6 +9511,23 @@
           ud.shield.rotation.y = -now * 0.002;
         } else {
           this.btlFoeMesh.visible = false;
+        }
+
+        // Update Second Foe 3D Node in 2v2 Doubles
+        if (BTL.isDoubles && BTL.p2.party[BTL.p2.actives[1]] && BTL.p2.party[BTL.p2.actives[1]].currentHp > 0) {
+          const foe2 = BTL.p2.party[BTL.p2.actives[1]];
+          this.btlFoeMesh2.visible = true;
+          const ud2 = this.btlFoeMesh2.userData;
+          const tex2 = this.getMonsterTexture(foe2.speciesId, foe2.shiny, true);
+          if (tex2 && ud2.spr.material.map !== tex2) { ud2.spr.material.map = tex2; ud2.spr.material.needsUpdate = true; }
+          const [fx1, fz1] = this.getSlot3DCoords(false, 0);
+          const [fx2, fz2] = this.getSlot3DCoords(false, 1);
+          this.btlFoeMesh.position.set(fx1, 0, fz1);
+          this.btlFoeMesh2.position.set(fx2, 0, fz2);
+          ud2.crownGrp.visible = !!foe2.isTera;
+          ud2.shield.visible = !!foe2.protected;
+        } else {
+          this.btlFoeMesh2.visible = false;
         }
 
         // 3D Pokeball Throw & Shake Physics
@@ -9116,15 +9645,34 @@
               this.btlCamera.lookAt(3.0, 1.25, -2.0);
             }
           } else {
-            if (this.btlCamFocus.isAlly) {
-              this.btlCamera.position.set(-4.6 + shakeX, 2.7 + shakeY, 5.4);
+            const elapsedAtk = now - (this.btlCamFocus.start || now);
+            const ap = this.btlCamFocus.atkPos || new THREE.Vector3(-3, 1.2, 2);
+            const dp = this.btlCamFocus.defPos || new THREE.Vector3(3, 1.2, -2);
+            if (elapsedAtk < 320) {
+              if (this.btlCamFocus.isAlly) {
+                this.btlCamera.position.set(ap.x - 2.2 + shakeX, 2.5 + shakeY, ap.z + 3.8);
+              } else {
+                this.btlCamera.position.set(ap.x - 1.8 + shakeX, 2.8 + shakeY, ap.z + 4.4);
+              }
+              this.btlCamera.lookAt(ap.x, 1.15, ap.z);
             } else {
-              this.btlCamera.position.set(1.8 + shakeX, 3.6 + shakeY, 6.2);
+              this.btlCamera.position.set(dp.x - 2.6 + shakeX, 3.0 + shakeY, dp.z + 4.8);
+              this.btlCamera.lookAt(dp.x, 1.15, dp.z);
             }
-            this.btlCamera.lookAt(0.2, 1.0, -0.2);
           }
+        } else if (BTL.camOverride === 'ally') {
+          this.btlCamera.position.set(-4.8 + shakeX, 2.6 + shakeY, 5.6);
+          this.btlCamera.lookAt(-1.6, 1.0, 1.2);
+        } else if (BTL.camOverride === 'foe') {
+          this.btlCamera.position.set(-0.6 + shakeX, 3.1 + shakeY, 2.4);
+          this.btlCamera.lookAt(2.4, 1.1, -2.4);
+        } else if (BTL.camOverride === 'wide') {
+          this.btlCamera.position.set(Math.sin(orbit) * 1.5 + shakeX, 6.4 + shakeY, 9.6);
+          this.btlCamera.lookAt(0, 0.7, 0);
         } else {
-          this.btlCamera.position.set(Math.sin(orbit) * 2.2 - 1.2 + shakeX, 3.65 + shakeY, 7.6);
+          const distZ = BTL.isDoubles ? 9.1 : 7.6;
+          const heightY = BTL.isDoubles ? 4.35 : 3.65;
+          this.btlCamera.position.set(Math.sin(orbit) * 2.4 - 0.8 + shakeX, heightY + shakeY, distZ);
           this.btlCamera.lookAt(0.1, 1.05, -0.1);
         }
 
@@ -9218,6 +9766,17 @@
         return true;
       }
     };
+
+    function cycleBattleCameraAngle() {
+      if (!BTL) return;
+      AudioFX.click();
+      const order = ['auto', 'ally', 'foe', 'wide'];
+      const labels = { auto: '🎥 动态运镜', ally: '🎥 我方特写', foe: '🎥 敌方特写', wide: '🎥 双打俯瞰' };
+      const idx = order.indexOf(BTL.camOverride || 'auto');
+      BTL.camOverride = order[(idx + 1) % order.length];
+      const btn = document.getElementById('btn-btl-cam');
+      if (btn) btn.textContent = labels[BTL.camOverride];
+    }
 
     function cycle3DCameraPreset() {
       AudioFX.click();
